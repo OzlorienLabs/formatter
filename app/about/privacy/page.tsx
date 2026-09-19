@@ -1,9 +1,20 @@
+export const metadata = { title: "Privacy — Formatter", description: "There is no server to receive your input." };
+
+const prose: React.CSSProperties = { fontSize: 17, lineHeight: 1.6, color: "var(--color-neutral-800)", maxWidth: "58ch" };
+
 export default function Privacy() {
   return (
-    <div className="card p-6 grid gap-2">
-      <h1 className="text-xl font-bold">Privacy</h1>
-      <p className="text-sm">All 125 tools run 100% client-side with Web APIs + lightweight JS/Wasm. No uploads. Share links use URL hash (lz-string) generated locally. Wasm engines download once then work offline.</p>
-      <p className="text-sm text-[#87867F]">Backend-required modes (Rust/Java full compile, PlantUML server render, live-URL SEO fetch, CORS-bypass proxy) are intentionally out of scope – those tools run in degraded paste-only lite mode with a notice.</p>
+    <div style={{ padding: "clamp(20px,3vw,40px) clamp(18px,3vw,44px) 72px", maxWidth: 900, display: "grid", gap: "var(--space-4)" }}>
+      <h1 style={{ margin: 0, fontSize: "clamp(30px,3.6vw,48px)", letterSpacing: "-.03em", lineHeight: 1.05 }}>Privacy</h1>
+      <p style={prose}>
+        All one hundred and twenty-five tools run in the page, with Web APIs and a little Wasm. Nothing is uploaded.
+        Share links encode the payload into the URL fragment, which browsers never transmit. Wasm engines download
+        once and then work offline.
+      </p>
+      <p style={{ ...prose, color: "var(--color-neutral-700)" }}>
+        The modes that would need a backend — full Rust and Java compilation, PlantUML server rendering, live-URL SEO
+        fetches, a CORS proxy — are deliberately out of scope. Those tools run in a paste-only lite mode and say so.
+      </p>
     </div>
   );
 }

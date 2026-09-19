@@ -396,3 +396,190 @@ export const decodeShare = (s: string) => {
     return "";
   }
 };
+
+/* ── Tool dispatch. Moved here from ToolShell unchanged. ── */
+
+export async function dispatch(slug: string, input: string, input2: string, option: string): Promise<string> {
+  const indent = option === "4" ? 4 : 2;
+  switch (slug) {
+    case "json-formatter": return jsonFormat(input, indent);
+    case "json-validator": return jsonValidate(input).ok ? "Valid JSON ✔" : `Invalid: ${jsonValidate(input).error}`;
+    case "json-minifier": return jsonMinify(input);
+    case "json-viewer": return jsonFormat(input, 2);
+    case "json-diff": return fileDiff(input, input2 || "{}");
+    case "json-escape": return jsonEscape(input);
+    case "json-unescape": return jsonUnescape(input);
+    case "json-to-base64": return jsonToBase64(input);
+    case "json-to-json-schema": return jsonToJsonSchema(input);
+    case "jq-playground": return jqLite(input, input2 || "$");
+    case "jsonpath-playground": return jqLite(input, input2 || "$");
+    case "base64-encoder": return base64Encode(input);
+    case "base64-decoder": return base64Decode(input);
+    case "base64-to-hex": return base64ToHex(input);
+    case "base64-to-pdf":
+    case "base64-image-converter": return "Paste Base64, then use Download to save as .bin and rename to .pdf/.png – fully local. File picker supported in Image Toolkit.";
+    case "url-encoder": return urlEncode(input);
+    case "url-decoder": return urlDecode(input);
+    case "html-entity-encoder": return htmlEncode(input);
+    case "html-entity-decoder": return htmlDecode(input);
+    case "jwt-decoder": return jwtDecode(input);
+    case "binary-to-text": return binaryToText(input);
+    case "text-to-binary": return textToBinary(input);
+    case "hex-to-text": return hexToText(input);
+    case "text-to-hex": return textToHex(input);
+    case "ascii-table": return asciiTable();
+    case "base-converter": return `bin: ${baseConvert(input, 10, 2)}\noct: ${baseConvert(input, 10, 8)}\nhex: ${baseConvert(input, 10, 16)}`;
+    case "big-number": return bigEval(input);
+    case "epoch-converter": return epochConvert(input);
+    case "string-length": return stringLength(input);
+    case "json-to-csv": return jsonToCsv(input);
+    case "csv-to-json": return csvToJson(input);
+    case "json-to-yaml": return jsonToYaml(input);
+    case "yaml-to-json": return yamlToJson(input);
+    case "json-to-xml": return jsonToXml(input);
+    case "xml-to-json": return xmlToJson(input);
+    case "toml-to-json": return tomlToJson(input);
+    case "json-to-toml": return jsonToToml(input);
+    case "json-to-sql": return jsonToSql(input);
+    case "csv-to-sql": return csvToSql(input);
+    case "graphviz-to-mermaid": return graphvizToMermaid(input);
+    case "curl-to-code": return curlToCode(input);
+    case "template-string-merger": return templateMerge(input, input2);
+    case "json-schema-validator": {
+      const v = jsonValidate(input);
+      return v.ok ? "Parses as JSON ✔ (full AJV check runs with schema paste in input2 – subset)" : `Invalid JSON: ${v.error}`;
+    }
+    case "csv-validator": return csvValidate(input);
+    case "yaml-validator": return yamlValidate(input);
+    case "xml-validator": return xmlValidate(input);
+    case "xml-formatter": return xmlFormat(input);
+    case "xml-viewer":
+    case "xml-editor": return xmlFormat(input);
+    case "xpath-tester": return "Enter XML in Input, XPath in second box (e.g. //a). Evaluation runs via document.evaluate in browser – paste XML then Run.";
+    case "css-formatter": return cssFormat(input);
+    case "html-formatter": return htmlFormat(input);
+    case "js-formatter": return input.trim();
+    case "sql-formatter": return sqlFormatSafe(input);
+    case "inline-sql-vars": return inlineSqlVars(input, input2);
+    case "stack-trace-formatter":
+    case "java-exception-formatter":
+    case "go-stacktrace-formatter": return input.split("\n").map((l) => l.trim()).filter(Boolean).join("\n");
+    case "text-toolbox": return textToolbox(input, option);
+    case "log-privacy-workbench": return redactSecrets(input);
+    case "file-diff-viewer": return fileDiff(input, input2);
+    case "markdown-editor": return input;
+    case "data-explorer": return dataProfileCsv(input);
+    case "csv-viewer": return csvToJson(input);
+    case "csv-query-sql": return `Query: ${input2 || input}\nTip: filter client-side. Full DuckDB SQL in duckdb-playground.`;
+    case "duckdb-playground":
+    case "sql-playground":
+    case "parquet-viewer": return "Wasm engine loads on demand (lazy). Core demo: paste CSV then open csv-query-sql. No server.";
+    case "ddl-to-diagram": return ddlToMermaid(input);
+    case "hash-generator": return await hashText(input, option === "sha512" ? "SHA-512" : "SHA-256");
+    case "hmac-tool": return await hmacSign(input2 || "key", input);
+    case "password-generator": return randomPassword(20);
+    case "token-generator":
+    case "uuid-generator": return `${newUuid()}\n${newUuid()}\n${newUuid()}`;
+    case "secret-detector": return secretScan(input) + "\n\nRedacted:\n" + redactSecrets(input);
+    case "x509-viewer": return "Paste PEM. Client parses header/length locally; full ASN.1 via pkijs lazy-load (offline after first load).";
+    case "security-header-helper": return `Content-Security-Policy: default-src 'self'\nStrict-Transport-Security: max-age=31536000; includeSubDomains\nX-Content-Type-Options: nosniff\nReferrer-Policy: strict-origin-when-cross-origin`;
+    case "regex-tester":
+    case "regex-lab-py-go-java": {
+      const [pat, flags] = (input2 || input).split("\n");
+      try {
+        const re = new RegExp(pat || input, "g");
+        const matches = (input.match(re) || []).slice(0, 50);
+        return `matches (${matches.length}):\n${matches.join("\n")}`;
+      } catch (e: any) {
+        return `Regex error: ${e.message}`;
+      }
+    }
+    case "graphql-playground-ui": return `Query composer (CORS applies, no proxy):\n${input}`;
+    case "api-workbench": return "Enter URL in Input. Browser fetch applies (CORS, no proxy). Use DevTools network tab alongside – 100% local.";
+    case "mcp-inspector-lite": return jsonFormat(input || '{"tools":[]}', 2);
+    case "fake-json-api-sw": return 'Mock routes stored in localStorage. Example: GET /api/users -> [{"id":1}]';
+    case "javascript-playground": return `Sandboxed eval disabled by default for safety. Paste code, review, run in DevTools console. Input length: ${input.length}`;
+    case "python-playground-pyodide":
+    case "go-playground-lite":
+    case "rust-playground-lite":
+    case "java-playground-lite": return "Client-only lite mode: syntax stays local. Full compile needs server (explicitly out of scope).";
+    case "openscad-playground":
+    case "threejs-playground":
+    case "canvas-playground": return `Preview code (runs locally when you press Run in full canvas mode):\n${input.slice(0, 2000)}`;
+    case "excalidraw-embed": return "Embed Excalidraw via iframe; drawings never leave browser.";
+    case "graphviz-editor": return graphvizToMermaid(input);
+    case "mermaid-playground": return input;
+    case "plantuml-lite": {
+      const enc = base64Encode(input).slice(0, 200);
+      return `Encoded (client-only, no server render):\n${enc}...`;
+    }
+    case "qr-generator": return `QR payload ready (${input.length} chars). Canvas render in UI – fully local via qrcode lib.`;
+    case "lorem-generator": return "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(6);
+    case "random-json-generator":
+    case "mock-data-generator": return JSON.stringify([{ id: 1, name: "Ada", email: "ada@example.com" }, { id: 2, name: "Bo", email: "bo@example.com" }], null, 2);
+    case "mysql-cmd-gen": return `mysql -h localhost -u root -p ${input || "mydb"}`;
+    case "tar-cmd-gen": return `tar -czf archive.tar.gz ${input || "dist/"}`;
+    case "curl-cmd-gen": return `curl -X GET "${input || "https://api.example.com"}" -H "Accept: application/json"`;
+    case "cron-builder": return cronDescribe(input || "*/5 * * * *");
+    case "gitignore-generator": return gitignoreGen(input);
+    case "dockerfile-generator": return dockerGen(input);
+    case "env-toolkit": return envParse(input);
+    case "gha-explainer": return `Workflow has ${(input.match(/jobs:/g) || []).length} job block(s). Paste YAML to diagram steps locally.`;
+    case "svg-preview": return input;
+    case "color-picker": return `Selected: ${input || "#0088b0"}`;
+    case "color-contrast-converter": {
+      const parts = input.split(/ on |,|\s+/).filter(Boolean);
+      const fg = parts[0] || "#201e1d";
+      const bg = parts[1] || "#f3f2f2";
+      return `ratio: ${contrastRatio(fg, bg)}:1 (WCAG AA needs >=4.5)`;
+    }
+    case "image-toolkit": return "Drop image (handled in dedicated uploader with canvas resize/compress – local only).";
+    case "seo-inspector-paste-only": return `Title: ${(input.match(/<title>(.*?)<\/title>/i) || ["", "—"])[1]}\nMeta desc: ${(input.match(/name="description" content="(.*?)"/i) || ["", "—"])[1]}\n(paste-only, no live fetch)`;
+    case "jsonld-inspector": return jsonFormat(input || '{"@context":"https://schema.org"}', 2);
+    case "ascii-draw": return input || "+---+\n|   |\n+---+";
+    case "box-drawing": return boxDraw(input || "hello");
+    case "comment-ascii-art": return `// ===== ${input || "Header"} =====`;
+    case "text-to-ascii-figlet": return `# FIGlet (lazy) for: ${input}`;
+    case "image-to-ascii": return "Upload image in Image Toolkit – pixel sampling via canvas getImageData locally.";
+    case "ascii-tree": return asciiTree(input);
+    case "stopwatch-timer": return "Use Start/Stop buttons in UI (performance.now, worker-backed).";
+    case "timezone-compare": return `Local: ${new Date().toString()}\nUTC: ${new Date().toUTCString()}\nCity query: ${input || "Tokyo, London, NYC"} (Intl API)`;
+    case "tool-pipelines": return "Chain: pick output -> Send to Pipeline -> select next tool. In-memory only.";
+    case "saved-workspaces": return "Workspaces persist to localStorage key devtools:workspaces. No account.";
+    case "developer-recipes": return "Recipes: Format->Validate->Minify, CSV->JSON->SQL, Log->Redact->Diff. One-click presets.";
+    default: return input;
+  }
+}
+
+/**
+ * The slugs a pipeline step may use: tools whose dispatch case is a real
+ * transform of its input. Tools that only return a notice (wasm loaders,
+ * lite-mode playgrounds, file pickers, the platform pages) are left out —
+ * chaining them would put their explanatory text into the payload.
+ */
+export const RUNNABLE_SLUGS: string[] = [
+  "json-formatter", "json-validator", "json-minifier", "json-viewer", "json-escape",
+  "json-unescape", "json-to-base64", "json-to-json-schema", "jq-playground", "jsonpath-playground",
+  "base64-encoder", "base64-decoder", "base64-to-hex", "url-encoder", "url-decoder",
+  "html-entity-encoder", "html-entity-decoder", "jwt-decoder",
+  "binary-to-text", "text-to-binary", "hex-to-text", "text-to-hex", "ascii-table",
+  "base-converter", "big-number", "epoch-converter", "string-length",
+  "json-to-csv", "csv-to-json", "json-to-yaml", "yaml-to-json", "json-to-xml", "xml-to-json",
+  "toml-to-json", "json-to-toml", "json-to-sql", "csv-to-sql", "graphviz-to-mermaid",
+  "curl-to-code", "template-string-merger",
+  "json-schema-validator", "csv-validator", "yaml-validator", "xml-validator",
+  "xml-formatter", "xml-viewer", "xml-editor",
+  "css-formatter", "html-formatter", "sql-formatter", "inline-sql-vars",
+  "stack-trace-formatter", "java-exception-formatter", "go-stacktrace-formatter",
+  "text-toolbox", "log-privacy-workbench", "file-diff-viewer",
+  "data-explorer", "csv-viewer", "ddl-to-diagram",
+  "hash-generator", "hmac-tool", "password-generator", "token-generator", "uuid-generator",
+  "secret-detector", "security-header-helper",
+  "regex-tester", "regex-lab-py-go-java", "mcp-inspector-lite",
+  "graphviz-editor", "plantuml-lite",
+  "lorem-generator", "random-json-generator", "mock-data-generator",
+  "mysql-cmd-gen", "tar-cmd-gen", "curl-cmd-gen", "cron-builder", "gitignore-generator",
+  "dockerfile-generator", "env-toolkit", "gha-explainer",
+  "color-picker", "color-contrast-converter", "seo-inspector-paste-only", "jsonld-inspector",
+  "box-drawing", "comment-ascii-art", "ascii-tree", "timezone-compare",
+];
