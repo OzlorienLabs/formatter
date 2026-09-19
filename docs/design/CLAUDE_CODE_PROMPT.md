@@ -48,7 +48,7 @@ naming the phase.
 
 1. Extend `ToolMeta` in `src/lib/tools-registry.ts` with `icon: string` (Phosphor name, no
    weight suffix) and add `plate: 'c' | 'm' | 'y' | 'k'` to the category record.
-2. Apply the renames, icons and plates from `design_handoff_formatter/tools-registry-data.js`.
+2. Apply the renames, icons and plates from `docs/design/tools-registry-data.js`.
    That file is plain data keyed by slug — write a one-off script to merge it in rather than
    retyping 125 rows.
    **Do not change any slug.** URLs, share hashes, `app/sitemap.ts` and existing bookmarks
