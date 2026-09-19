@@ -107,30 +107,48 @@ export function newEntryId(): string {
 /* ── Hooks. Each one reads storage inside an effect, so SSR and the first
       client render agree and hydration never mismatches. ──────────────── */
 
-/** Keeps a ref in lockstep with state so callbacks never read a stale list. */
-function useMirror<T>(value: T) {
+/**
+ * Keeps a ref in lockstep with state so callbacks never read a stale list, and
+ * reports whether the load-from-storage effect has run yet.
+ *
+ * This matters: a child's mount effect fires before its parent's, so a tool
+ * page can call record() or touch() before the provider has hydrated. Writing
+ * from the empty initial state would erase what is in storage, so callbacks
+ * read through `current()`, which falls back to a fresh read until hydration.
+ */
+function useMirror<T>(value: T, key: string, fallback: T) {
   const ref = useRef(value);
   ref.current = value;
-  return ref;
+  const hydrated = useRef(false);
+  const current = useCallback(
+    () => (hydrated.current ? ref.current : read<T>(key, fallback)),
+    [key, fallback]
+  );
+  return { ref, hydrated, current };
 }
 
 export function useFavourites() {
   const [favs, setFavs] = useState<string[]>([]);
-  const ref = useMirror(favs);
+  const { ref, hydrated, current } = useMirror<string[]>(favs, KEYS.favs, []);
 
   useEffect(() => {
-    setFavs(asSlugs(read<string[]>(KEYS.favs, [])).slice(0, MAX_FAVS));
-  }, []);
+    const loaded = asSlugs(read<string[]>(KEYS.favs, [])).slice(0, MAX_FAVS);
+    // The ref is marked hydrated and filled together: a callback that fires
+    // between the effect and the re-render must not see an empty list.
+    ref.current = loaded;
+    hydrated.current = true;
+    setFavs(loaded);
+  }, [ref, hydrated]);
 
   const toggle = useCallback(
     (slug: string) => {
-      const next = toggleFav(ref.current, slug);
+      const next = toggleFav(asSlugs(current()), slug);
       ref.current = next;
       setFavs(next);
       write(KEYS.favs, next);
       return next.includes(slug);
     },
-    [ref]
+    [ref, current]
   );
 
   const clear = useCallback(() => {
@@ -144,7 +162,7 @@ export function useFavourites() {
 
 export function useRecents() {
   const [recents, setRecents] = useState<string[]>([]);
-  const ref = useMirror(recents);
+  const { ref, hydrated, current } = useMirror<string[]>(recents, KEYS.recents, []);
 
   useEffect(() => {
     let list = asSlugs(read<string[]>(KEYS.recents, []));
@@ -156,18 +174,21 @@ export function useRecents() {
       }
     }
     drop(LEGACY_RECENTS);
-    setRecents(list.slice(0, MAX_RECENTS));
-  }, []);
+    const loaded = list.slice(0, MAX_RECENTS);
+    ref.current = loaded;
+    hydrated.current = true;
+    setRecents(loaded);
+  }, [ref, hydrated]);
 
   const touch = useCallback(
     (slug: string) => {
-      const next = pushRecent(ref.current, slug);
-      if (next[0] === ref.current[0] && next.length === ref.current.length) return;
+      const now = asSlugs(current());
+      const next = pushRecent(now, slug);
       ref.current = next;
       setRecents(next);
       write(KEYS.recents, next);
     },
-    [ref]
+    [ref, current]
   );
 
   return { recents, touch };
@@ -175,23 +196,27 @@ export function useRecents() {
 
 export function useHistory() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const ref = useMirror(history);
+  const { ref, hydrated, current } = useMirror<HistoryEntry[]>(history, KEYS.history, []);
 
   useEffect(() => {
     const raw = read<HistoryEntry[]>(KEYS.history, []);
-    setHistory(Array.isArray(raw) ? raw.slice(0, MAX_HISTORY) : []);
-  }, []);
+    const loaded = Array.isArray(raw) ? raw.slice(0, MAX_HISTORY) : [];
+    ref.current = loaded;
+    hydrated.current = true;
+    setHistory(loaded);
+  }, [ref, hydrated]);
 
   const record = useCallback(
     (entry: Omit<HistoryEntry, "id" | "t">) => {
+      const now = current();
       const full: HistoryEntry = { id: newEntryId(), t: Date.now(), ...entry };
-      const next = pushHistory(ref.current, full);
-      if (next === ref.current) return;
+      const next = pushHistory(Array.isArray(now) ? now : [], full);
+      if (next === now) return;
       ref.current = next;
       setHistory(next);
       write(KEYS.history, next);
     },
-    [ref]
+    [ref, current]
   );
 
   const remove = useCallback(
@@ -215,11 +240,11 @@ export function useHistory() {
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const ref = useMirror(settings);
+  const { ref, hydrated, current } = useMirror<Settings>(settings, KEYS.settings, DEFAULT_SETTINGS);
 
   useEffect(() => {
     const raw = read<Partial<Settings>>(KEYS.settings, {});
-    setSettings({
+    const loaded: Settings = {
       glass: raw.glass !== false,
       motion: raw.motion !== false,
       autorun: raw.autorun !== false,
@@ -228,17 +253,20 @@ export function useSettings() {
         typeof raw.mono === "number"
           ? Math.min(18, Math.max(12, raw.mono))
           : DEFAULT_SETTINGS.mono,
-    });
-  }, []);
+    };
+    ref.current = loaded;
+    hydrated.current = true;
+    setSettings(loaded);
+  }, [ref, hydrated]);
 
   const set = useCallback(
     (patch: Partial<Settings>) => {
-      const next = { ...ref.current, ...patch };
+      const next = { ...DEFAULT_SETTINGS, ...current(), ...patch };
       ref.current = next;
       setSettings(next);
       write(KEYS.settings, next);
     },
-    [ref]
+    [ref, current]
   );
 
   return { ...settings, set };

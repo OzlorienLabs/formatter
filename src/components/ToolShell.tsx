@@ -478,6 +478,7 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
           {error && (
             <div
               role="alert"
+              data-testid="tool-error"
               style={{
                 display: "flex",
                 gap: 10,

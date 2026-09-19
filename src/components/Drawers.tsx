@@ -81,6 +81,8 @@ function HistoryBody() {
           <div
             key={h.id}
             className="g2"
+            data-testid="history-entry"
+            data-slug={h.slug}
             style={{ position: "relative", padding: "13px 15px", borderRadius: "var(--radius-lg)", marginBottom: 9 }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

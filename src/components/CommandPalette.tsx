@@ -39,8 +39,20 @@ export default function CommandPalette() {
     setQ("");
     setIndex(0);
     const t = setTimeout(() => inputRef.current?.focus(), 0);
-    return () => clearTimeout(t);
-  }, [paletteOpen]);
+    // Escape closes even if something outside the dialog holds focus.
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPaletteOpen(false);
+        restoreTo.current?.focus?.();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [paletteOpen, setPaletteOpen]);
 
   function close() {
     setPaletteOpen(false);
