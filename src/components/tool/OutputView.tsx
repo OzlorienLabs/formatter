@@ -36,7 +36,7 @@ function useSanitised(markup: string, svg: boolean) {
 
 /* ── views ──────────────────────────────────────────────────────────── */
 
-export function CodeView({ text, lang, fontSize, wrap: wrapDefault }: { text: string; lang?: Lang; fontSize: number; wrap?: boolean }) {
+export function CodeView({ text, lang, fontSize, wrap: wrapDefault, lineHeight }: { text: string; lang?: Lang; fontSize: number; wrap?: boolean; lineHeight?: number }) {
   const [wrap, setWrap] = useState(!!wrapDefault);
   const clipped = text.length > MAX_RENDER;
   const shown = clipped ? text.slice(0, MAX_RENDER) : text;
@@ -52,7 +52,7 @@ export function CodeView({ text, lang, fontSize, wrap: wrapDefault }: { text: st
       >
         {wrap ? "No wrap" : "Wrap"}
       </button>
-      <pre id="tool-output" aria-live="polite" className={`codeview${wrap ? " wrap" : ""}`} style={{ fontSize }} dangerouslySetInnerHTML={{ __html: html }} />
+      <pre id="tool-output" aria-live="polite" className={`codeview${wrap ? " wrap" : ""}`} style={{ fontSize, lineHeight }} dangerouslySetInnerHTML={{ __html: html }} />
       {clipped && (
         <p style={{ padding: "0 14px 14px", fontSize: 13, color: "var(--color-neutral-600)" }}>
           Showing the first {MAX_RENDER.toLocaleString()} characters of {text.length.toLocaleString()} — Copy and Download include everything.
@@ -447,7 +447,7 @@ const INK_FOR = { error: "var(--color-accent-2-700)", warning: "var(--plate-y)",
 export default function OutputView({ out, fontSize }: { out: Output; fontSize: number }) {
   switch (out.kind) {
     case "text":
-      return <CodeView text={out.text} lang={out.lang} fontSize={fontSize} wrap={out.wrap} />;
+      return <CodeView text={out.text} lang={out.lang} fontSize={fontSize} wrap={out.wrap} lineHeight={out.lineHeight} />;
     case "html":
       return <HtmlView html={out.html} css={out.css} />;
     case "svg":

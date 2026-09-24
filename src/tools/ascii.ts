@@ -337,14 +337,14 @@ const specs: SpecModule = {
           text,
           notes,
           views: [
-            { label: "Table", out: { kind: "text", text } },
+            { label: "Table", out: { kind: "text", text, lineHeight: 1.2 } },
             { label: "Parsed", out: { kind: "table", columns: bool(opts.header) ? t.rows[0].map((c, i) => c || `col ${i + 1}`) : t.rows[0].map((_, i) => `col ${i + 1}`), rows: bool(opts.header) ? t.rows.slice(1) : t.rows } },
             sizeStats(text, [{ label: "Detected format", value: t.format.toUpperCase() }, { label: "Rows × columns", value: `${t.rows.length} × ${Math.max(...lens)}` }]),
           ],
         };
       }
       const text = trimLines(drawBox(src, { style: str(opts.style, "single"), align: str(opts.align, "left") as Align, padX: num(opts.padX, 1), padY: num(opts.padY, 0), margin: num(opts.margin, 0), width: num(opts.width, 0), title: str(opts.title), titleAlign: str(opts.titleAlign, "left") as Align }));
-      return { text, views: [{ label: "Box", out: { kind: "text", text } }, sizeStats(text)] };
+      return { text, views: [{ label: "Box", out: { kind: "text", text, lineHeight: 1.2 } }, sizeStats(text)] };
     },
     examples: [
       { label: "Notice box", inputs: { text: "Deploy finished in 42s\nAll 318 tests passed" }, opts: { style: "rounded", align: "center", padX: 2, padY: 1, title: "CI" }, note: "A rounded frame with a title set into the top border, centred text and vertical padding." },
@@ -398,7 +398,7 @@ const specs: SpecModule = {
       const closer = syn.close?.trim() || syn.suffix;
       if (closer && body.some((l) => l.includes(closer))) notes.push(`The banner contains "${closer}", which ends the comment early — choose another fill character.`);
       const outText = out.join("\n");
-      return { text: outText, notes: notes.length ? notes : undefined, views: [{ label: "Comment", out: { kind: "text", text: outText } }, sizeStats(outText)] };
+      return { text: outText, notes: notes.length ? notes : undefined, views: [{ label: "Comment", out: { kind: "text", text: outText, lineHeight: 1.2 } }, sizeStats(outText)] };
     },
     examples: [
       { label: "Section rule", inputs: { text: "Tool UI kit" }, opts: { lang: "slash", style: "rule", fill: "─", width: 60 }, note: "The one-line divider used all over this codebase: // ── Title ─────." },
@@ -438,7 +438,7 @@ const specs: SpecModule = {
       const notes: string[] = [];
       const odd = [...new Set([...text].filter((c) => c.charCodeAt(0) > 126 || (c.charCodeAt(0) < 32 && c !== "\n")))];
       if (odd.length) notes.push(`FIGlet fonts cover ASCII (and some Latin-1) only: ${odd.slice(0, 12).join(" ")} may render blank.`);
-      const views: View[] = [{ label: font, out: { kind: "text", text: out } }];
+      const views: View[] = [{ label: font, out: { kind: "text", text: out, lineHeight: 1.2 } }];
       if (bool(opts.gallery) && !pipeline) {
         const sample = text.split("\n")[0].slice(0, 24);
         const all = await Promise.all(
@@ -502,7 +502,7 @@ const specs: SpecModule = {
         throw new ToolError((e as Error).message);
       }
       const res = rasterToAscii(loaded.raster, o);
-      const views: View[] = [{ label: "ASCII", out: { kind: "text", text: res.text } }];
+      const views: View[] = [{ label: "ASCII", out: { kind: "text", text: res.text, lineHeight: 1.2 } }];
       if (bool(opts.color) && !pipeline) views.push({ label: "Colour", out: { kind: "html", html: colorHtml(res, o.invert) } });
       views.push({ label: "Source", out: { kind: "image", src, name: str(inputs["image:name"], "image") } });
       views.push({
@@ -603,7 +603,7 @@ const specs: SpecModule = {
       const { w, h } = textSize(src);
       const cs = str(opts.charset, "light") as Charset;
       const text = gridToText(convertCharset(makeGrid(w, h, src), cs));
-      return { text, views: [{ label: "Drawing", out: { kind: "text", text } }, sizeStats(text, [{ label: "Line style", value: cs }])] };
+      return { text, views: [{ label: "Drawing", out: { kind: "text", text, lineHeight: 1.2 } }, sizeStats(text, [{ label: "Line style", value: cs }])] };
     },
     examples: [
       { label: "Architecture", inputs: { art: ARCH, size: "72x18" }, note: "Boxes joined by arrows, drawn with the Box and Arrow tools — junctions like ┬ appear automatically." },

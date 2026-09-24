@@ -53,7 +53,7 @@ export type Inputs = Record<string, string>;
 export type Opts = Record<string, string | number | boolean>;
 
 export type Output =
-  | { kind: "text"; text: string; lang?: Lang; wrap?: boolean }
+  | { kind: "text"; text: string; lang?: Lang; wrap?: boolean; /** Tighter for block art, e.g. 1.15. */ lineHeight?: number }
   /** Markup built by the tool from sanitised parts. It is sanitised again on render. */
   | { kind: "html"; html: string; css?: string }
   | { kind: "svg"; svg: string; name?: string }

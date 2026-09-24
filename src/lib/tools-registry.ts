@@ -234,15 +234,15 @@ export const TOOLS: ToolMeta[] = [
   m("seo-inspector-paste-only", "SEO Inspector", "Image, Colour & SEO", "Audit pasted HTML head markup.", "magnifying-glass", "<title>Hi</title>"),
   m("jsonld-inspector", "JSON-LD Inspector", "Image, Colour & SEO", "Parse and validate structured data.", "brackets-curly", '{"@context":"https://schema.org"}'),
   // ASCII (6)
-  m("ascii-draw", "ASCII Draw", "ASCII", "Grid canvas for boxes and lines.", "grid-four", ""),
-  m("box-drawing", "Box Drawing", "ASCII", "Unicode borders around text.", "square", "hello"),
-  m("comment-ascii-art", "Banner Comments", "ASCII", "Section headers for source files.", "text-h", "Header"),
-  m("text-to-ascii-figlet", "FIGlet Banner", "ASCII", "Large letterforms from text.", "text-aa", "Hi"),
-  m("image-to-ascii", "Image to ASCII", "ASCII", "Pixels turned into characters.", "image", ""),
-  m("ascii-tree", "ASCII Tree", "ASCII", "Indented list to a file tree.", "tree-structure", "src\n  index.ts"),
+  m("ascii-draw", "ASCII Draw", "ASCII", "Draw boxes, lines and arrows on a character grid.", "grid-four", ""),
+  m("box-drawing", "Box Drawing", "ASCII", "Frame text or tables with Unicode or ASCII borders.", "square", "hello"),
+  m("comment-ascii-art", "Banner Comments", "ASCII", "Section headers and FIGlet banners in any comment syntax.", "text-h", "Header"),
+  m("text-to-ascii-figlet", "FIGlet Banner", "ASCII", "38 bundled FIGlet fonts, fully offline.", "text-aa", "Hi"),
+  m("image-to-ascii", "Image to ASCII", "ASCII", "Pictures as ASCII, blocks or braille — with colour.", "image", ""),
+  m("ascii-tree", "ASCII Tree", "ASCII", "Paths, indented lists or JSON into a file tree — and back.", "tree-structure", "src\n  index.ts"),
   // Time (2)
-  m("stopwatch-timer", "Stopwatch", "Time", "High-resolution timers.", "timer", ""),
-  m("timezone-compare", "Timezone Compare", "Time", "World clocks side by side.", "globe-hemisphere-west", ""),
+  m("stopwatch-timer", "Stopwatch & Timers", "Time", "Stopwatch, countdown, Pomodoro, intervals and duration converter.", "timer", ""),
+  m("timezone-compare", "Timezone Compare", "Time", "Meeting planner: world clocks, overlap and DST.", "globe-hemisphere-west", ""),
   // Platform (3)
   m("tool-pipelines", "Pipelines", "Platform", "Chain tools together in memory.", "flow-arrow", ""),
   m("saved-workspaces", "Workspaces", "Platform", "Persist inputs and options locally.", "folders", ""),
