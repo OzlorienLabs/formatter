@@ -47,7 +47,7 @@ export const EXAMPLE_WORKSPACES: Workspace[] = [
         saved: t,
       },
     ],
-  },,
+  },
   {
     id: "ws-example-data",
     name: "Example · Data wrangling",

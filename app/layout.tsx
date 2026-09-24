@@ -1,22 +1,30 @@
 import "./globals.css";
-import { Source_Serif_4, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { AppStateProvider } from "@/src/components/AppState";
 import Shell from "@/src/components/Shell";
 
-// Self-hosted by next/font — no runtime font fetch, so offline still works.
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  style: ["normal", "italic"],
+// Self-hosted from @fontsource: no build-time or runtime font fetch, so offline works
+// and builds never depend on a third-party server.
+const serif = localFont({
+  src: [
+    { path: "../node_modules/@fontsource/source-serif-4/files/source-serif-4-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../node_modules/@fontsource/source-serif-4/files/source-serif-4-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "../node_modules/@fontsource/source-serif-4/files/source-serif-4-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../node_modules/@fontsource/source-serif-4/files/source-serif-4-latin-600-italic.woff2", weight: "600", style: "italic" },
+  ],
   display: "swap",
   variable: "--font-serif",
+  fallback: ["Georgia", "serif"],
 });
 
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const mono = localFont({
+  src: [
+    { path: "../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2", weight: "500", style: "normal" },
+  ],
   display: "swap",
   variable: "--font-plex-mono",
+  fallback: ["ui-monospace", "Menlo", "monospace"],
 });
 
 export const viewport = { themeColor: "#0088b0" };
