@@ -145,3 +145,67 @@ export function readState<T>(raw: string | undefined, fallback: T): T {
     return fallback;
   }
 }
+
+/** Key/value rows with an enable checkbox — headers, query params, form fields. */
+export type KVRow = { k: string; v: string; on?: boolean };
+export function KVEditor({ rows, onChange, keyPh = "name", valPh = "value", addLabel = "Add", hint }: { rows: KVRow[]; onChange: (r: KVRow[]) => void; keyPh?: string; valPh?: string; addLabel?: string; hint?: string }) {
+  const set = (i: number, patch: Partial<KVRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <div className="g-kv">
+      {rows.map((r, i) => (
+        <div key={i} className="g-kv-row">
+          <input type="checkbox" checked={r.on !== false} onChange={(e) => set(i, { on: e.target.checked })} aria-label={`Enable ${r.k || "row"}`} />
+          <input className="inp mono" value={r.k} placeholder={keyPh} onChange={(e) => set(i, { k: e.target.value })} aria-label={keyPh} spellCheck={false} />
+          <input className="inp mono" value={r.v} placeholder={valPh} onChange={(e) => set(i, { v: e.target.value })} aria-label={valPh} spellCheck={false} />
+          <button type="button" className="btn-icon" onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label={`Remove ${r.k || "row"}`} title="Remove">
+            <ToolIcon name="x" size={15} />
+          </button>
+        </div>
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" className="btn btn-sm" onClick={() => onChange([...rows, { k: "", v: "", on: true }])}>
+          <ToolIcon name="plus" size={14} /> {addLabel}
+        </button>
+        {hint && <span style={{ fontSize: 12.5, color: "var(--color-neutral-600)" }}>{hint}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Styles shared by the group-G form UIs. */
+export const G_CSS = `
+.g-split { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.g-split > .pane { min-height: 520px; }
+.g-sticky { position: sticky; top: 12px; max-height: calc(100vh - 24px); }
+.g-form { padding: 14px; display: grid; gap: 16px; }
+.g-sec { display: grid; gap: 10px; }
+.g-sec > h3 { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-neutral-600); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.g-sec > h3::after { content: ""; flex: 1; height: 1px; background: rgba(32,30,29,.1); }
+.g-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.g-checks { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.g-kv { display: grid; gap: 6px; }
+.g-kv-row { display: grid; grid-template-columns: 18px minmax(0, .8fr) minmax(0, 1.2fr) 28px; gap: 6px; align-items: center; }
+.g-kv-row input[type=checkbox] { accent-color: var(--color-accent-700); width: 15px; height: 15px; }
+.g-hint { font-size: 12.5px; color: var(--color-neutral-600); line-height: 1.45; }
+.g-form .grid-form { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.g-form textarea.inp { font-family: var(--font-mono); font-size: 13px; resize: vertical; min-height: 64px; line-height: 1.5; }
+.g-choice { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.g-choice button { text-align: left; padding: 7px 10px; border: 1px solid rgba(32,30,29,.14); border-radius: var(--radius-md); background: rgba(255,255,255,.4); cursor: pointer; font-size: 13.5px; color: var(--color-neutral-800); }
+.g-choice button:hover { border-color: var(--color-accent-400); }
+.g-choice button[aria-pressed="true"] { background: var(--color-accent-100); border-color: var(--color-accent-500); color: var(--color-accent-900); }
+@media (max-width: 1100px) { .g-split { grid-template-columns: minmax(0, 1fr); } .g-sticky { position: static; max-height: none; } }
+@media (max-width: 520px) { .g-form { padding: 12px; } .g-choice { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } }
+`;
+
+/** A titled form section. */
+export function Sec({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <section className="g-sec">
+      <h3>
+        {title}
+        {right}
+      </h3>
+      {children}
+    </section>
+  );
+}

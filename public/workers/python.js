@@ -10,7 +10,7 @@ const post = (m) => self.postMessage(m);
 let stdin = null;
 
 const HELPERS = `
-import sys, builtins, traceback
+import sys, builtins, traceback, linecache
 from pyodide.code import eval_code_async
 
 _fmt_input = builtins.input
@@ -26,6 +26,8 @@ builtins.input = _fmt_echo_input
 
 async def _fmt_run(code):
     ns = {"__name__": "__main__", "__builtins__": builtins}
+    # Let tracebacks quote the user's source lines.
+    linecache.cache["<main>"] = (len(code), None, code.splitlines(True), "<main>")
     try:
         result = await eval_code_async(code, ns, filename="<main>")
         return (None if result is None else repr(result)), None
