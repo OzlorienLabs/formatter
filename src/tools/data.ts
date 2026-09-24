@@ -799,9 +799,9 @@ const specs: SpecModule = {
         },
         { label: "Tables", out: { kind: "table", columns: ["table", "columns", "primary key", "unique", "foreign keys", "checks", "comment"], rows: tables.map((t) => [t.name, t.columns.length, t.pk.join(", ") || null, t.uniques.map((u) => `(${u.join(", ")})`).join(" ") || null, t.fks.length, t.checks.length, t.comment ?? null]) } }
       );
-      const items = [...warnings.map((w) => ({ level: "warning" as const, message: w.message, line: w.line }))];
-      if (skipped) items.push({ level: "info" as const, message: `${skipped} non-table statement(s) skipped (indexes, inserts, views…).`, line: undefined });
-      if (renderErr) items.unshift({ level: "error" as const, message: `Diagram render failed: ${renderErr}`, line: undefined });
+      const items: { level: "error" | "warning" | "info"; message: string; line?: number }[] = warnings.map((w) => ({ level: "warning", message: w.message, line: w.line }));
+      if (skipped) items.push({ level: "info", message: `${skipped} non-table statement(s) skipped (indexes, inserts, views…).` });
+      if (renderErr) items.unshift({ level: "error", message: `Diagram render failed: ${renderErr}` });
       if (items.length) views.push({ label: `Notes (${items.length})`, out: { kind: "issues", items } });
       return { text: code, lang: "mermaid", filename: "schema.mmd", views };
     },

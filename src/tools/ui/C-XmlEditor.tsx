@@ -12,13 +12,14 @@ type Tab = "tree" | "issues" | "json";
 const CSS = `
 .c-xe { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; min-height: min(680px, calc(100vh - 250px)); }
 .c-xe .pane { min-height: 420px; }
-.c-xe-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.c-xe-tools { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.c-xe-tools .btn { padding: 4px 8px; font-size: 12.5px; gap: 5px; }
 .c-xe-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
 .c-xe-state.ok { background: rgba(0,160,90,.09); color: oklch(42% .12 150); }
 .c-xe-state.bad { background: rgba(214,0,108,.08); color: var(--color-accent-2-700); }
 .c-xe-issue { cursor: pointer; border: 0; width: 100%; text-align: left; font: inherit; }
 .c-xe-issue:hover { outline: 1px solid var(--color-accent-300); }
-.c-xe-foot { display: flex; gap: 14px; flex-wrap: wrap; padding: 6px 12px; border-top: 1px solid rgba(32,30,29,.08); font-size: 12px; color: var(--color-neutral-600); font-family: var(--font-mono); }
+.c-xe-foot { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; padding: 6px 12px; border-top: 1px solid rgba(32,30,29,.08); font-size: 12px; color: var(--color-neutral-600); font-family: var(--font-mono); }
 @media (max-width: 1180px) { .c-xe { grid-template-columns: minmax(0, 1fr); } }
 `;
 
@@ -30,8 +31,12 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
   const doc = useMemo(() => parseXml(deferred), [deferred]);
   const errors = doc.issues.filter((i) => i.level === "error");
   const [tab, setTab] = useState<Tab>("tree");
-  const [flash, setFlash] = useState("");
+  const [flash, setFlash] = useState<{ msg: string; bad: boolean } | null>(null);
   const lastGood = useRef<string>("");
+  const prevSrc = useRef<string>(deferred);
+  // A different document (example switch, big paste) forgets the last valid tree.
+  if (Math.abs(deferred.length - prevSrc.current.length) > 0.5 * Math.max(deferred.length, prevSrc.current.length, 1)) lastGood.current = "";
+  prevSrc.current = deferred;
   if (!errors.length && deferred.trim()) lastGood.current = deferred;
 
   const json = useMemo(() => (errors.length ? "" : JSON.stringify(xmlToJson(doc), null, 2)), [doc, errors.length]);
@@ -39,9 +44,9 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
 
   const indent = opts.indent === "tab" ? "\t" : " ".repeat(Number(opts.indent) || 2);
 
-  function say(msg: string) {
-    setFlash(msg);
-    window.setTimeout(() => setFlash(""), 2200);
+  function say(msg: string, bad = false) {
+    setFlash({ msg, bad });
+    window.setTimeout(() => setFlash(null), 2400);
   }
 
   function rewrite(label: string, f: () => string) {
@@ -49,7 +54,7 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
     const errs = d.issues.filter((i) => i.level === "error");
     if (errs.length) {
       setTab("issues");
-      say(`${label}: fix ${errs.length} error${errs.length > 1 ? "s" : ""} first`);
+      say(`${label}: fix ${errs.length} error${errs.length > 1 ? "s" : ""} first`, true);
       return;
     }
     const next = f();
@@ -75,12 +80,12 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
         setTab("issues");
         const d = parseXml(src);
         const n = d.issues.filter((i) => i.level === "error").length;
-        say(n ? `${n} error${n > 1 ? "s" : ""}` : "Well-formed ✓");
+        say(n ? `${n} error${n > 1 ? "s" : ""}` : "Well-formed ✓", n > 0);
       },
     },
-    { label: "→ JSON", icon: "brackets-curly", title: "Show the document as JSON", go: () => { setTab("json"); if (errors.length) say("Fix the errors to convert"); } },
-    { label: "Sort attributes", icon: "list", title: "Alphabetise attributes in place (xmlns first)", go: () => rewrite("Sort attributes", () => sortAttributesInSource(parseXml(src))) },
-    { label: "Remove comments", icon: "eraser", title: "Delete every <!-- comment -->", go: () => rewrite("Remove comments", () => removeCommentsInSource(parseXml(src))) },
+    { label: "→ JSON", icon: "brackets-curly", title: "Show the document as JSON", go: () => { setTab("json"); if (errors.length) say("Fix the errors to convert", true); } },
+    { label: "Sort attrs", icon: "list", title: "Alphabetise attributes in place (xmlns first)", go: () => rewrite("Sort attributes", () => sortAttributesInSource(parseXml(src))) },
+    { label: "Strip comments", icon: "eraser", title: "Delete every <!-- comment -->", go: () => rewrite("Remove comments", () => removeCommentsInSource(parseXml(src))) },
   ];
 
   function jump(line: number, col: number) {
@@ -114,13 +119,17 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
           <div className="c-xe-tools" role="toolbar" aria-label="Editor actions">
             {actions.map((a) => (
               <button key={a.label} type="button" className="btn btn-sm" title={a.title} onClick={a.go}>
-                <ToolIcon name={a.icon} size={15} /> {a.label}
+                <ToolIcon name={a.icon} size={14} /> {a.label}
               </button>
             ))}
           </div>
-          <div style={{ flex: 1 }} />
+        </div>
+        <div style={{ display: "flex", flex: 1, minHeight: 360 }}>
+          <CodeEditor id="c-xml-input" value={src} onChange={(v) => setInput("xml", v)} lang="xml" fontSize={mono} label="XML" placeholder="Type or paste XML — or drop a .xml file" minHeight={360} />
+        </div>
+        <div className="c-xe-foot">
           {flash ? (
-            <span className="c-xe-state ok" role="status">{flash}</span>
+            <span className={`c-xe-state ${flash.bad ? "bad" : "ok"}`} role="status">{flash.msg}</span>
           ) : src.trim() ? (
             errors.length ? (
               <button type="button" className="c-xe-state bad" style={{ border: 0, cursor: "pointer" }} onClick={() => setTab("issues")}>
@@ -130,11 +139,7 @@ export default function XmlEditor({ inputs, opts, setInput, record, mono }: Cust
               <span className="c-xe-state ok"><ToolIcon name="seal-check" size={14} /> Well-formed</span>
             )
           ) : null}
-        </div>
-        <div style={{ display: "flex", flex: 1, minHeight: 360 }}>
-          <CodeEditor id="c-xml-input" value={src} onChange={(v) => setInput("xml", v)} lang="xml" fontSize={mono} label="XML" placeholder="Type or paste XML — or drop a .xml file" minHeight={360} />
-        </div>
-        <div className="c-xe-foot">
+          <span style={{ flex: 1 }} />
           <span>{src.split("\n").length.toLocaleString()} lines</span>
           <span>{src.length.toLocaleString()} chars</span>
           {stats && (

@@ -318,6 +318,10 @@ function requestView(r: ReqT): ReactNode {
   );
 }
 
+const PREVIEW_CSS = `.b-merge-preview h1{font-size:1.7em;font-weight:600}.b-merge-preview h2{font-size:1.35em;font-weight:600}.b-merge-preview h3{font-size:1.15em;font-weight:600}
+.b-merge-preview ul{list-style:disc;padding-left:1.4em;margin:.5em 0}.b-merge-preview ol{list-style:decimal;padding-left:1.4em;margin:.5em 0}
+.b-merge-preview p{margin:.5em 0}.b-merge-preview a{color:var(--color-accent-700);text-decoration:underline}`;
+
 /* ── specs ───────────────────────────────────────────────────────────── */
 
 const specs: SpecModule = {
@@ -406,7 +410,7 @@ const specs: SpecModule = {
       let data = res.data as string[][];
       if (!bool(opts.skipEmpty) && data.length && data[data.length - 1].length === 1 && data[data.length - 1][0] === "" && /\r?\n$/.test(src)) data = data.slice(0, -1);
       if (bool(opts.trim)) data = data.map((r) => r.map((c) => c.trim()));
-      if (d === "auto") notes.push(`Detected delimiter: ${res.meta.delimiter === "\t" ? "Tab" : JSON.stringify(res.meta.delimiter)}`);
+      if (d === "auto" && res.meta.delimiter !== ",") notes.push(`Detected delimiter: ${res.meta.delimiter === "\t" ? "Tab" : JSON.stringify(res.meta.delimiter)}`);
       const typed = bool(opts.typed);
       const emptyMode = str(opts.empty, "string");
       const conv = (s: string, col = -1) => (typed && !textCols.has(col) ? typeCell(s, emptyMode === "null" ? "null" : "string") : s === "" && emptyMode === "null" ? null : s);
@@ -993,7 +997,7 @@ const specs: SpecModule = {
         { label: "Output", out: { kind: "text", text, wrap: true } },
         { label: `Warnings (${warnings.length})`, out: { kind: "issues", items: issues } },
       ];
-      if (/<(p|div|h[1-6]|table|ul|ol|li|br|strong|em|a|span|b|i)\b/i.test(text)) views.splice(1, 0, { label: "HTML preview", out: { kind: "html", html: text } });
+      if (/<(p|div|h[1-6]|table|ul|ol|li|br|strong|em|a|span|b|i)\b/i.test(text)) views.splice(1, 0, { label: "HTML preview", out: { kind: "html", html: `<div class="b-merge-preview">${text}</div>`, css: PREVIEW_CSS } });
       if (merge) views.push({ label: `Records (${perRecord.length})`, out: { kind: "table", columns: ["#", "warnings", "first line"], rows: perRecord } });
       const notes = warnings.length ? [`${warnings.length} missing variable${warnings.length === 1 ? "" : "s"} — see Warnings.`] : [];
       if (merge) notes.unshift(`Mail merge: ${(data as unknown[]).length} records.`);

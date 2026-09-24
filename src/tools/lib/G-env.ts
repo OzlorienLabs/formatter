@@ -59,15 +59,15 @@ export function parseEnv(src: string): { entries: EnvEntry[]; issues: Issue[] } 
       let body = v.slice(1);
       let end = findClose(body, q);
       let j = i;
-      while (end < 0 && j + 1 < lines.length) {
+      // a multi-line value continues until its closing quote — but never across a line that starts a new KEY=
+      while (end < 0 && j + 1 < lines.length && !/^\s*(export\s+)?[A-Za-z_][\w.-]*\s*=/.test(lines[j + 1])) {
         j++;
         body += "\n" + lines[j];
         end = findClose(body, q);
       }
       if (end < 0) {
-        issues.push({ level: "error", message: `${key}: unterminated ${q === '"' ? "double" : q === "'" ? "single" : "backtick"} quote — the value runs to the end of the file.`, line: lineNo, col: line.indexOf(q) + 1 });
-        value = body;
-        i = lines.length;
+        issues.push({ level: "error", message: `${key}: unterminated ${q === '"' ? "double" : q === "'" ? "single" : "backtick"} quote — add the closing ${q}.`, line: lineNo, col: line.indexOf(q) + 1 });
+        value = v.slice(1);
       } else {
         value = body.slice(0, end);
         const after = body.slice(end + 1).trim();

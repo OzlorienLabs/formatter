@@ -167,7 +167,15 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
             </option>
           ))}
         </select>
-        <input className="inp url" aria-label="URL" value={st.url} spellCheck={false} placeholder="/mock-api/users or https://api.example.com/…" onChange={(e) => update({ url: e.target.value, params: syncParamsFromUrl(e.target.value, st.params) })} style={{ fontSize: mono }} />
+        <input
+          className="inp url"
+          aria-label="URL"
+          value={st.url}
+          spellCheck={false}
+          placeholder="/mock-api/users or https://api.example.com/…"
+          onChange={(e) => update({ url: e.target.value, params: syncParamsFromUrl(e.target.value, st.params) })}
+          style={{ fontSize: mono }}
+        />
         {busy ? (
           <button type="button" className="btn" onClick={() => abort.current?.abort()}>
             Cancel
@@ -180,163 +188,247 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
       </form>
 
       <div className="e-aw-grid">
-        <section className="g pane" aria-label="Request">
-          <div className="pane-head">
-            <div className="tabs" role="tablist">
-              {(
-                [
-                  ["params", `Params${enabled(st.params) ? ` (${enabled(st.params)})` : ""}`],
-                  ["headers", `Headers${enabled(st.headers) ? ` (${enabled(st.headers)})` : ""}`],
-                  ["body", `Body${st.bodyType !== "none" ? " ●" : ""}`],
-                  ["auth", `Auth${st.auth.type !== "none" ? " ●" : ""}`],
-                  ["export", "Export"],
-                ] as [ReqTab, string][]
-              ).map(([k, l]) => (
-                <button key={k} type="button" role="tab" aria-selected={reqTab === k} onClick={() => setReqTab(k)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-          {reqTab === "params" && (
-            <>
-              <KV rows={st.params} onChange={(params) => update({ params, url: urlWithParams(st.url, params) })} keyPh="param" />
-              <p className="e-note" style={{ padding: "0 12px 12px" }}>Rows and the URL stay in sync. Unticked rows are kept here but not sent.</p>
-            </>
-          )}
-          {reqTab === "headers" && <KV rows={st.headers} onChange={(headers) => update({ headers })} keyPh="Header-Name" />}
-          {reqTab === "body" && (
-            <div className="e-sub">
-              <div className="seg" role="group" aria-label="Body type" style={{ flexWrap: "wrap" }}>
-                {(["none", "json", "form", "multipart", "raw", "text"] as BodyType[]).map((b) => (
-                  <button key={b} type="button" aria-pressed={st.bodyType === b} onClick={() => update({ bodyType: b })}>
-                    {b === "form" ? "x-www-form" : b === "json" ? "JSON" : b}
-                  </button>
-                ))}
-              </div>
-              {(st.method === "GET" || st.method === "HEAD") && st.bodyType !== "none" && <p className="e-note" style={{ color: "var(--color-accent-2-700)" }}>{st.method} requests cannot carry a body — switch the method to POST, PUT or PATCH.</p>}
-              {(st.bodyType === "json" || st.bodyType === "raw" || st.bodyType === "text") && (
-                <>
-                  {st.bodyType === "raw" && (
-                    <label className="opt">
-                      <span className="lbl">Content-Type</span>
-                      <input className="inp mono" value={st.rawType} onChange={(e) => update({ rawType: e.target.value })} style={{ flex: 1 }} />
-                    </label>
-                  )}
-                  <div className="g2" style={{ display: "flex", minHeight: 200, borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-                    <CodeEditor value={st.body} onChange={(body) => update({ body })} lang={st.bodyType === "json" ? "json" : /xml/.test(st.rawType) && st.bodyType === "raw" ? "xml" : "text"} fontSize={mono} minHeight={200} label="Request body" onSubmit={() => void doSend()} />
-                  </div>
-                  {st.bodyType === "json" && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        onClick={() => {
-                          try {
-                            update({ body: JSON.stringify(JSON.parse(st.body), null, 2) });
-                          } catch (e) {
-                            setErr(`Body: ${(e as Error).message}`);
-                          }
-                        }}
-                      >
-                        Format JSON
-                      </button>
-                      {built.notes.map((n) => (
-                        <span key={n} className="e-note" style={{ color: "var(--color-accent-2-700)" }}>
-                          {n}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-              {(st.bodyType === "form" || st.bodyType === "multipart") && (
-                <div style={{ margin: "0 -12px" }}>
-                  <KV rows={st.form} onChange={(form) => update({ form })} keyPh="field" />
-                  {st.bodyType === "multipart" && <p className="e-note" style={{ padding: "0 12px" }}>Text fields only — file parts are not supported here.</p>}
-                </div>
-              )}
-              {st.bodyType === "none" && <p className="e-note">No body. Choose JSON, a form or raw text to send one.</p>}
-            </div>
-          )}
-          {reqTab === "auth" && (
-            <div className="e-sub">
-              <div className="seg" role="group" aria-label="Auth type">
+        <div style={{ display: "grid", gap: 12, alignContent: "start", minWidth: 0 }}>
+          <section className="g pane" aria-label="Request">
+            <div className="pane-head">
+              <div className="tabs" role="tablist">
                 {(
                   [
-                    ["none", "None"],
-                    ["bearer", "Bearer"],
-                    ["basic", "Basic"],
-                    ["apikey", "API key"],
-                  ] as [AuthType, string][]
+                    ["params", `Params${enabled(st.params) ? ` (${enabled(st.params)})` : ""}`],
+                    ["headers", `Headers${enabled(st.headers) ? ` (${enabled(st.headers)})` : ""}`],
+                    ["body", `Body${st.bodyType !== "none" ? " ●" : ""}`],
+                    ["auth", `Auth${st.auth.type !== "none" ? " ●" : ""}`],
+                    ["export", "Export"],
+                  ] as [ReqTab, string][]
                 ).map(([k, l]) => (
-                  <button key={k} type="button" aria-pressed={st.auth.type === k} onClick={() => update({ auth: { ...st.auth, type: k } })}>
+                  <button key={k} type="button" role="tab" aria-selected={reqTab === k} onClick={() => setReqTab(k)}>
                     {l}
                   </button>
                 ))}
               </div>
-              {st.auth.type === "bearer" && (
-                <div className="grid-form" style={{ gridTemplateColumns: "1fr" }}>
-                  <label>
-                    Token
-                    <input className="inp mono" value={st.auth.token} onChange={(e) => update({ auth: { ...st.auth, token: e.target.value } })} placeholder="eyJhbGciOi…" autoComplete="off" />
-                  </label>
-                </div>
-              )}
-              {st.auth.type === "basic" && (
-                <div className="grid-form">
-                  <label>
-                    Username
-                    <input className="inp mono" value={st.auth.user} onChange={(e) => update({ auth: { ...st.auth, user: e.target.value } })} autoComplete="off" />
-                  </label>
-                  <label>
-                    Password
-                    <input className="inp mono" type="password" value={st.auth.pass} onChange={(e) => update({ auth: { ...st.auth, pass: e.target.value } })} autoComplete="off" />
-                  </label>
-                </div>
-              )}
-              {st.auth.type === "apikey" && (
-                <div className="grid-form">
-                  <label>
-                    Key name
-                    <input className="inp mono" value={st.auth.key} onChange={(e) => update({ auth: { ...st.auth, key: e.target.value } })} />
-                  </label>
-                  <label>
-                    Value
-                    <input className="inp mono" value={st.auth.value} onChange={(e) => update({ auth: { ...st.auth, value: e.target.value } })} autoComplete="off" />
-                  </label>
-                  <label>
-                    Send in
-                    <select className="sel" value={st.auth.in} onChange={(e) => update({ auth: { ...st.auth, in: e.target.value as "header" | "query" } })}>
-                      <option value="header">Header</option>
-                      <option value="query">Query string</option>
-                    </select>
-                  </label>
-                </div>
-              )}
-              <p className="e-note">{st.auth.type === "none" ? "No credentials are added." : `Adds ${st.auth.type === "apikey" ? (st.auth.in === "header" ? `a ${st.auth.key || "key"} header` : `?${st.auth.key || "key"}= to the URL`) : "an Authorization header"} when sending. Credentials stay in this browser; they are part of share links and history, so use test keys.`}</p>
             </div>
-          )}
-          {reqTab === "export" && (
-            <div className="e-sub">
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <div className="seg" role="group" aria-label="Export format">
-                  {(["curl", "fetch", "python"] as const).map((k) => (
-                    <button key={k} type="button" aria-pressed={exp === k} onClick={() => setExp(k)}>
-                      {k === "python" ? "Python requests" : k === "fetch" ? "fetch()" : "curl"}
+            {reqTab === "params" && (
+              <>
+                <KV rows={st.params} onChange={(params) => update({ params, url: urlWithParams(st.url, params) })} keyPh="param" />
+                <p className="e-note" style={{ padding: "0 12px 12px" }}>
+                  Rows and the URL stay in sync. Unticked rows are kept here but not sent.
+                </p>
+              </>
+            )}
+            {reqTab === "headers" && <KV rows={st.headers} onChange={(headers) => update({ headers })} keyPh="Header-Name" />}
+            {reqTab === "body" && (
+              <div className="e-sub">
+                <div className="seg" role="group" aria-label="Body type" style={{ flexWrap: "wrap" }}>
+                  {(["none", "json", "form", "multipart", "raw", "text"] as BodyType[]).map((b) => (
+                    <button key={b} type="button" aria-pressed={st.bodyType === b} onClick={() => update({ bodyType: b })}>
+                      {b === "form" ? "x-www-form" : b === "json" ? "JSON" : b}
                     </button>
                   ))}
                 </div>
-                <button type="button" className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(exportText).catch(() => {})}>
-                  Copy
+                {(st.method === "GET" || st.method === "HEAD") && st.bodyType !== "none" && (
+                  <p className="e-note" style={{ color: "var(--color-accent-2-700)" }}>
+                    {st.method} requests cannot carry a body — switch the method to POST, PUT or PATCH.
+                  </p>
+                )}
+                {(st.bodyType === "json" || st.bodyType === "raw" || st.bodyType === "text") && (
+                  <>
+                    {st.bodyType === "raw" && (
+                      <label className="opt">
+                        <span className="lbl">Content-Type</span>
+                        <input className="inp mono" value={st.rawType} onChange={(e) => update({ rawType: e.target.value })} style={{ flex: 1 }} />
+                      </label>
+                    )}
+                    <div className="g2" style={{ display: "flex", minHeight: 200, borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+                      <CodeEditor
+                        value={st.body}
+                        onChange={(body) => update({ body })}
+                        lang={st.bodyType === "json" ? "json" : /xml/.test(st.rawType) && st.bodyType === "raw" ? "xml" : "text"}
+                        fontSize={mono}
+                        minHeight={200}
+                        label="Request body"
+                        onSubmit={() => void doSend()}
+                      />
+                    </div>
+                    {st.bodyType === "json" && (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => {
+                            try {
+                              update({ body: JSON.stringify(JSON.parse(st.body), null, 2) });
+                            } catch (e) {
+                              setErr(`Body: ${(e as Error).message}`);
+                            }
+                          }}
+                        >
+                          Format JSON
+                        </button>
+                        {built.notes.map((n) => (
+                          <span key={n} className="e-note" style={{ color: "var(--color-accent-2-700)" }}>
+                            {n}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+                {(st.bodyType === "form" || st.bodyType === "multipart") && (
+                  <div style={{ margin: "0 -12px" }}>
+                    <KV rows={st.form} onChange={(form) => update({ form })} keyPh="field" />
+                    {st.bodyType === "multipart" && (
+                      <p className="e-note" style={{ padding: "0 12px" }}>
+                        Text fields only — file parts are not supported here.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {st.bodyType === "none" && <p className="e-note">No body. Choose JSON, a form or raw text to send one.</p>}
+              </div>
+            )}
+            {reqTab === "auth" && (
+              <div className="e-sub">
+                <div className="seg" role="group" aria-label="Auth type">
+                  {(
+                    [
+                      ["none", "None"],
+                      ["bearer", "Bearer"],
+                      ["basic", "Basic"],
+                      ["apikey", "API key"],
+                    ] as [AuthType, string][]
+                  ).map(([k, l]) => (
+                    <button key={k} type="button" aria-pressed={st.auth.type === k} onClick={() => update({ auth: { ...st.auth, type: k } })}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                {st.auth.type === "bearer" && (
+                  <div className="grid-form" style={{ gridTemplateColumns: "1fr" }}>
+                    <label>
+                      Token
+                      <input className="inp mono" value={st.auth.token} onChange={(e) => update({ auth: { ...st.auth, token: e.target.value } })} placeholder="eyJhbGciOi…" autoComplete="off" />
+                    </label>
+                  </div>
+                )}
+                {st.auth.type === "basic" && (
+                  <div className="grid-form">
+                    <label>
+                      Username
+                      <input className="inp mono" value={st.auth.user} onChange={(e) => update({ auth: { ...st.auth, user: e.target.value } })} autoComplete="off" />
+                    </label>
+                    <label>
+                      Password
+                      <input className="inp mono" type="password" value={st.auth.pass} onChange={(e) => update({ auth: { ...st.auth, pass: e.target.value } })} autoComplete="off" />
+                    </label>
+                  </div>
+                )}
+                {st.auth.type === "apikey" && (
+                  <div className="grid-form">
+                    <label>
+                      Key name
+                      <input className="inp mono" value={st.auth.key} onChange={(e) => update({ auth: { ...st.auth, key: e.target.value } })} />
+                    </label>
+                    <label>
+                      Value
+                      <input className="inp mono" value={st.auth.value} onChange={(e) => update({ auth: { ...st.auth, value: e.target.value } })} autoComplete="off" />
+                    </label>
+                    <label>
+                      Send in
+                      <select className="sel" value={st.auth.in} onChange={(e) => update({ auth: { ...st.auth, in: e.target.value as "header" | "query" } })}>
+                        <option value="header">Header</option>
+                        <option value="query">Query string</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+                <p className="e-note">
+                  {st.auth.type === "none"
+                    ? "No credentials are added."
+                    : `Adds ${st.auth.type === "apikey" ? (st.auth.in === "header" ? `a ${st.auth.key || "key"} header` : `?${st.auth.key || "key"}= to the URL`) : "an Authorization header"} when sending. Credentials stay in this browser; they are part of share links and history, so use test keys.`}
+                </p>
+              </div>
+            )}
+            {reqTab === "export" && (
+              <div className="e-sub">
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <div className="seg" role="group" aria-label="Export format">
+                    {(["curl", "fetch", "python"] as const).map((k) => (
+                      <button key={k} type="button" aria-pressed={exp === k} onClick={() => setExp(k)}>
+                        {k === "python" ? "Python requests" : k === "fetch" ? "fetch()" : "curl"}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(exportText).catch(() => {})}>
+                    Copy
+                  </button>
+                </div>
+                <div className="g2" style={{ borderRadius: "var(--radius-md)", maxHeight: 360, overflow: "auto" }}>
+                  <CodeView text={exportText} lang={exp === "curl" ? "shell" : exp === "fetch" ? "js" : "python"} fontSize={mono - 1} />
+                </div>
+              </div>
+            )}
+          </section>
+          <section className="g pane" aria-label="History">
+            <div className="pane-head">
+              <span className="lbl">History</span>
+              <span className="e-meta">{hist.length}/50 · this browser only</span>
+              <div style={{ flex: 1 }} />
+              {hist.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={() => {
+                    saveHistory([]);
+                    setHist([]);
+                  }}
+                >
+                  Clear
                 </button>
-              </div>
-              <div className="g2" style={{ borderRadius: "var(--radius-md)", maxHeight: 360, overflow: "auto" }}>
-                <CodeView text={exportText} lang={exp === "curl" ? "shell" : exp === "fetch" ? "js" : "python"} fontSize={mono - 1} />
-              </div>
+              )}
             </div>
-          )}
-        </section>
+            {hist.length ? (
+              <div className="e-hist scroll" style={{ maxHeight: 260, overflow: "auto" }}>
+                {hist.map((h) => (
+                  <div
+                    key={h.id}
+                    className="e-hist-row"
+                    role="button"
+                    tabIndex={0}
+                    title="Load this request"
+                    onClick={() => setInput("request", stateJson(h.state))}
+                    onKeyDown={(e) => e.key === "Enter" && setInput("request", stateJson(h.state))}
+                  >
+                    <span className="e-badge" style={{ color: METHOD_COLOR[h.state.method] }}>
+                      {h.state.method}
+                    </span>
+                    <span className="u">{h.state.url}</span>
+                    <span className={`e-pill ${statusCls(h.status)}`}>{h.status}</span>
+                    <span className="e-meta t">
+                      {h.ms} ms · {new Date(h.at).toLocaleTimeString()}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      aria-label="Delete from history"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = hist.filter((x) => x.id !== h.id);
+                        saveHistory(next);
+                        setHist(next);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="e-note" style={{ padding: "10px 12px" }}>
+                Sent requests appear here. Click one to load it again.
+              </p>
+            )}
+          </section>
+        </div>
 
         <section className="g pane" aria-label="Response" style={{ minHeight: 320 }}>
           <div className="pane-head">
@@ -348,14 +440,24 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
                 </span>
                 <span className="e-meta">{Math.round(resp.ms)} ms</span>
                 <span className="e-meta">{fmtBytes(resp.size)}</span>
-                {resp.mock && <span className="e-meta" title={resp.route ? `route ${resp.route}` : undefined}>· offline mock{resp.delay ? ` (${resp.delay} ms delay)` : ""}</span>}
+                {resp.mock && (
+                  <span className="e-meta" title={resp.route ? `route ${resp.route}` : undefined}>
+                    · offline mock{resp.delay ? ` (${resp.delay} ms delay)` : ""}
+                  </span>
+                )}
               </>
             )}
-            {busy && <span className="e-meta" style={{ color: "var(--color-accent-700)" }}>sending…</span>}
+            {busy && (
+              <span className="e-meta" style={{ color: "var(--color-accent-700)" }}>
+                sending…
+              </span>
+            )}
           </div>
           {err && (
             <div role="alert" className="errband">
-              <span className="mono" style={{ fontSize: 12.5, color: "var(--color-accent-2-700)", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{err}</span>
+              <span className="mono" style={{ fontSize: 12.5, color: "var(--color-accent-2-700)", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+                {err}
+              </span>
             </div>
           )}
           {resp?.notes.map((n) => (
@@ -368,12 +470,10 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
               <div className="pane-head" style={{ minHeight: 34, padding: "2px 12px" }}>
                 <div className="tabs" role="tablist">
                   {(
-                    [
-                      ["body", pb.json !== undefined ? "Pretty" : "Body"],
-                      ["raw", "Raw"],
-                      ...(isHtml ? [["preview", "Preview"]] : []),
-                      ["headers", `Headers (${resp.headers.length})`],
-                    ] as [ResTab, string][]
+                    [["body", pb.json !== undefined ? "Pretty" : "Body"], ["raw", "Raw"], ...(isHtml ? [["preview", "Preview"]] : []), ["headers", `Headers (${resp.headers.length})`]] as [
+                      ResTab,
+                      string,
+                    ][]
                   ).map(([k, l]) => (
                     <button key={k} type="button" role="tab" aria-selected={resTab === k} onClick={() => setResTab(k)}>
                       {l}
@@ -382,7 +482,12 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
                 </div>
               </div>
               <div className="scroll" style={{ maxHeight: "clamp(320px, 62vh, 720px)", overflow: "auto" }}>
-                {resTab === "body" && (pb.json !== undefined ? <OutputView out={{ kind: "tree", value: pb.json }} fontSize={mono} /> : <CodeView text={pb.text || "(empty body)"} lang={isHtml ? "html" : /xml/.test(resp.contentType) ? "xml" : "text"} fontSize={mono} />)}
+                {resTab === "body" &&
+                  (pb.json !== undefined ? (
+                    <OutputView out={{ kind: "tree", value: pb.json }} fontSize={mono} />
+                  ) : (
+                    <CodeView text={pb.text || "(empty body)"} lang={isHtml ? "html" : /xml/.test(resp.contentType) ? "xml" : "text"} fontSize={mono} />
+                  ))}
                 {resTab === "raw" && <CodeView text={resp.body || "(empty body)"} lang={pb.json !== undefined ? "json" : "text"} fontSize={mono} wrap />}
                 {resTab === "preview" && isHtml && <iframe title="HTML preview" sandbox="" srcDoc={resp.body} style={{ width: "100%", height: 480, border: 0, background: "#fff" }} />}
                 {resTab === "headers" && <OutputView out={{ kind: "table", columns: ["header", "value"], rows: resp.headers }} fontSize={mono} />}
@@ -392,7 +497,8 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
             !err && (
               <div style={{ padding: 16, display: "grid", gap: 10 }}>
                 <p className="e-note" style={{ fontSize: 14 }}>
-                  Press <b>Send</b>. URLs starting with <code className="mono">/mock-api/</code> are answered offline by the built-in mock API (manage routes in Fake JSON API). Any other URL is fetched directly from your browser only when you press Send.
+                  Press <b>Send</b>. URLs starting with <code className="mono">/mock-api/</code> are answered offline by the built-in mock API (manage routes in Fake JSON API). Any other URL is
+                  fetched directly from your browser only when you press Send.
                 </p>
                 <div className="chips">
                   {["/mock-api/users", "/mock-api/posts?userId=2", "/mock-api/products?page=1&limit=3", "/mock-api/echo", "/mock-api/status/404", "/mock-api/people?count=2"].map((u) => (
@@ -406,53 +512,6 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
           )}
         </section>
       </div>
-
-      <section className="g pane" aria-label="History">
-        <div className="pane-head">
-          <span className="lbl">History</span>
-          <span className="e-meta">{hist.length}/50 · this browser only</span>
-          <div style={{ flex: 1 }} />
-          {hist.length > 0 && (
-            <button
-              type="button"
-              className="btn btn-sm btn-danger"
-              onClick={() => {
-                saveHistory([]);
-                setHist([]);
-              }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        {hist.length ? (
-          <div className="e-hist scroll" style={{ maxHeight: 260, overflow: "auto" }}>
-            {hist.map((h) => (
-              <div key={h.id} className="e-hist-row" role="button" tabIndex={0} title="Load this request" onClick={() => setInput("request", stateJson(h.state))} onKeyDown={(e) => e.key === "Enter" && setInput("request", stateJson(h.state))}>
-                <span className="e-badge" style={{ color: METHOD_COLOR[h.state.method] }}>{h.state.method}</span>
-                <span className="u">{h.state.url}</span>
-                <span className={`e-pill ${statusCls(h.status)}`}>{h.status}</span>
-                <span className="e-meta t">{h.ms} ms · {new Date(h.at).toLocaleTimeString()}</span>
-                <button
-                  type="button"
-                  className="btn-icon"
-                  aria-label="Delete from history"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const next = hist.filter((x) => x.id !== h.id);
-                    saveHistory(next);
-                    setHist(next);
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="e-note" style={{ padding: "10px 12px" }}>Sent requests appear here. Click one to load it again.</p>
-        )}
-      </section>
     </div>
   );
 }

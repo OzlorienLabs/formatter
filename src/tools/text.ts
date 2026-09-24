@@ -871,7 +871,7 @@ const specs: SpecModule = {
   "inline-sql-vars": {
     inputs: [
       { id: "sql", label: "SQL with placeholders", lang: "sql", placeholder: "SELECT * FROM users WHERE id = ? AND status = ?" },
-      { id: "values", label: "Values — JSON, CSV, name=value lines, or an ORM log", lang: "text", rows: 7, placeholder: '[42, "active"]  ·  {"id": 42}  ·  42, active  ·  ==> Parameters: 42(Long), active(String)' },
+      { id: "values", label: "Values or ORM log", lang: "text", rows: 7, wrap: true, placeholder: '[42, "active"]  ·  {"id": 42}  ·  42, active  ·  ==> Parameters: 42(Long), active(String)' },
     ],
     options: [
       { id: "style", label: "Placeholders", type: "select", choices: [["auto", "Auto-detect"], ["?", "? (JDBC)"], ["$1", "$1 (PostgreSQL)"], [":name", ":name"], ["@name", "@name (T-SQL)"], ["%s", "%s (Python)"], ["%(name)s", "%(name)s (pyformat)"], ["{name}", "{name} / {0}"]], default: "auto" },
@@ -1157,6 +1157,7 @@ const specs: SpecModule = {
       { id: "hideStd", label: "Hide stdlib", type: "toggle", default: false },
       { id: "args", label: "Show args", type: "toggle", default: false },
       { id: "offset", label: "Show +0x offsets", type: "toggle", default: false },
+      { id: "short", label: "Short paths", type: "toggle", default: true, hint: "GOROOT becomes $GOROOT and the common prefix of your files is dropped" },
     ],
     async run({ inputs, opts }) {
       if (!inputs.trace.trim()) throw new ToolError("Paste Go panic output or a goroutine dump.");
@@ -1165,7 +1166,12 @@ const specs: SpecModule = {
       if (!d.goroutines.length) throw new ToolError("No goroutines found. Expected a header like “goroutine 1 [running]:”.");
       const showFrame = (f: import("./lib/C-traces").GoFrame) => !(bool(opts.hideRuntime) && f.runtime) && !(bool(opts.hideStd) && f.std && !f.runtime ? true : bool(opts.hideStd) && f.runtime);
       const fmtFn = (f: import("./lib/C-traces").GoFrame) => `${f.fn}(${bool(opts.args) ? f.args : f.args ? "…" : ""})`;
-      const fmtLoc = (f: import("./lib/C-traces").GoFrame) => (f.file ? `${f.file}:${f.line}${bool(opts.offset) && f.offset ? " " + f.offset : ""}` : "(inlined)");
+      const { commonPrefix } = await util();
+      const own = [...new Set(d.goroutines.flatMap((g) => [...g.frames, ...(g.createdBy ? [g.createdBy] : [])]).filter((f) => f.file && !f.std).map((f) => f.file))];
+      let pfx = own.length > 1 ? commonPrefix(own) : own[0]?.slice(0, own[0].lastIndexOf("/") + 1) ?? "";
+      pfx = pfx.slice(0, pfx.lastIndexOf("/") + 1);
+      const shortFile = (p: string) => (!bool(opts.short) ? p : p.replace(/^.*?\/go\/src\//, "$GOROOT/").replace(pfx.length > 1 ? pfx : "\0", ""));
+      const fmtLoc = (f: import("./lib/C-traces").GoFrame) => (f.file ? `${shortFile(f.file)}:${f.line}${bool(opts.offset) && f.offset ? " " + f.offset : ""}` : "(inlined)");
       type Group = { gs: import("./lib/C-traces").Goroutine[]; sig: string };
       const groups: Group[] = [];
       const bySig = new Map<string, Group>();
@@ -1323,7 +1329,7 @@ const specs: SpecModule = {
       { label: "Headline → Title Case", inputs: { text: "the lord of the rings: the return of the king\na tale of two cities\nhow to use an iPhone with NASA data" }, opts: { op: "title" }, note: "Small words stay lower-case except at the ends; iPhone and NASA are left alone." },
       { label: "Names → camelCase", inputs: { text: NAMES }, opts: { op: "camel" }, note: "Each line is split into words from spaces, dashes, underscores and existing camel humps." },
       { label: "CONSTANT_CASE", inputs: { text: NAMES }, opts: { op: "constant" } },
-      { label: "Natural sort + dedupe", inputs: { text: FILES }, opts: { op: "sort-natural", ci: true }, note: "report-2 sorts before report-10; try “Remove duplicates” with Ignore case next." },
+      { label: "Natural sort", inputs: { text: FILES }, opts: { op: "sort-natural", ci: true }, note: "report-2 sorts before report-10, the way people expect file names to sort." },
       { label: "Remove duplicates", inputs: { text: FILES }, opts: { op: "dedupe", ci: true }, note: "Image_3.png and image_3.png count as the same line with Ignore case on." },
       { label: "Regex replace (dates)", inputs: { text: "Invoices due 2026-09-30, 2026-10-15 and 2026-11-01." }, opts: { op: "replace", pattern: "(\\d{4})-(\\d{2})-(\\d{2})", replace: "$3/$2/$1", regex: true, flags: "g" }, note: "Capture groups reorder ISO dates to DD/MM/YYYY; see the Changes tab." },
       { label: "Extract emails", inputs: { text: PROSE }, opts: { op: "emails" } },
@@ -1394,7 +1400,7 @@ const specs: SpecModule = {
       const total = [...counts.values()].reduce((a, b) => a + b, 0);
       const fmt = Object.entries(formats).sort((a, b) => b[1] - a[1]).map(([f, n]) => `${f} ×${n}`).join(", ");
       const views: View[] = [
-        { label: "Redacted", out: { kind: "text", text: text || "(no lines match the filters)" } },
+        { label: "Redacted", out: { kind: "text", text: text || "(no lines match the filters)", wrap: true } },
         { label: `Parsed (${kept.length})`, out: { kind: "table", columns: ["line", "time", "level", "source", "message", "redactions"], rows: kept.map((k) => [k.e.lineNo, k.e.time, k.e.level, k.e.source, k.msg.split("\n")[0], k.hits]) } },
         {
           label: "Stats",
@@ -1507,6 +1513,7 @@ const specs: SpecModule = {
       { id: "breaks", label: "Line breaks", type: "toggle", default: false, hint: "Treat single newlines as <br>" },
       { id: "footnotes", label: "Footnotes", type: "toggle", default: true },
       { id: "anchors", label: "Heading anchors", type: "toggle", default: false },
+      { id: "remote", label: "Load remote images", type: "toggle", default: false, hint: "Off: http(s) images are shown as placeholders in the preview, so nothing is fetched" },
       { id: "full", label: "Full HTML document", type: "toggle", default: false, hint: "The HTML output becomes a standalone page with embedded CSS" },
     ],
     outLang: "html",
@@ -1523,6 +1530,12 @@ const specs: SpecModule = {
       const { escHtml } = await util();
       const text = bool(opts.full) ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escHtml(title)}</title>\n<style>${M.DOC_CSS}</style>\n</head>\n<body>\n${html}</body>\n</html>` : html.trimEnd();
       const toc = M.tocMarkdown(r.headings);
+      const preview = bool(opts.remote)
+        ? html
+        : html.replace(/<img\b[^>]*?\bsrc="(https?:[^"]*)"[^>]*>/gi, (m, src: string) => {
+            const alt = /\balt="([^"]*)"/.exec(m)?.[1] || "image";
+            return `<span class="md-img-blocked" title="Remote image not loaded: ${src}">🖼 ${alt}</span>`;
+          });
       const words = r.stats.words;
       const mins = words / 230;
       return {
@@ -1530,7 +1543,7 @@ const specs: SpecModule = {
         lang: "html",
         filename: bool(opts.full) ? "document.html" : "fragment.html",
         views: [
-          { label: "Preview", out: { kind: "html", html, css: M.MD_CSS } },
+          { label: "Preview", out: { kind: "html", html: `<div class="c-md">${preview}</div>`, css: M.MD_CSS } },
           { label: "HTML", out: { kind: "text", text, lang: "html" } },
           { label: `Contents (${r.headings.length})`, out: r.headings.length ? { kind: "table", columns: ["level", "heading", "anchor"], rows: r.headings.map((h) => [`H${h.level}`, "  ".repeat(h.level - 1) + h.text, "#" + h.id]) } : { kind: "status", ok: false, title: "No headings", detail: "Add # headings to build a table of contents." } },
           { label: "TOC (Markdown)", out: { kind: "text", text: toc || "(no headings)", lang: "markdown" } },
@@ -1558,7 +1571,7 @@ const specs: SpecModule = {
       };
     },
     examples: [
-      { label: "README", inputs: { md: README }, note: "Badges, a code fence, an aligned table and a blockquote — a typical project README." },
+      { label: "README", inputs: { md: README }, note: "Badges, a code fence, an aligned table and a blockquote. Remote badge images stay as placeholders unless you turn on Load remote images." },
       { label: "Task list", inputs: { md: MD_TASKS }, note: "GFM task lists (- [ ] / - [x]), nested, plus strikethrough. Stats counts the tasks done." },
       { label: "Code fences", inputs: { md: MD_CODE }, note: "Fenced blocks keep their language as a class (language-js) for highlighters." },
       { label: "Blog post + footnotes", inputs: { md: MD_BLOG }, opts: { anchors: true }, note: "Footnotes, smart quotes and dashes from the typographer, autolinked URLs and hover anchors on headings." },

@@ -121,6 +121,9 @@ function extractFootnotes(src: string): { body: string; defs: Record<string, str
 export async function renderMarkdown(src: string, o: MdOptions) {
   const { default: MD } = await import("markdown-it");
   const md = new MD({ html: o.html, linkify: o.linkify, typographer: o.typographer, breaks: o.breaks, langPrefix: "language-" });
+  // Also allow SVG data: images (safe inside <img>); everything else keeps markdown-it's checks.
+  const validate = md.validateLink.bind(md);
+  md.validateLink = (url: string) => /^data:image\/svg\+xml[;,]/i.test(url.trim()) || validate(url);
   if (o.tasks) taskLists(md);
   headingIds(md, o.anchors);
   let body = src;
@@ -173,17 +176,30 @@ export function tocMarkdown(headings: Heading[], maxLevel = 6): string {
 }
 
 export const MD_CSS = `
-.prose .task-list-item { list-style: none; }
-.prose .contains-task-list { padding-left: 1.2em; }
-.prose .task-list-item-checkbox { margin: 0 .45em 0 -1.2em; vertical-align: middle; accent-color: var(--color-accent-700); }
-.prose .md-anchor { opacity: 0; text-decoration: none; margin-left: .25em; color: var(--color-accent-600); font-weight: 400; }
-.prose h1:hover .md-anchor, .prose h2:hover .md-anchor, .prose h3:hover .md-anchor, .prose h4:hover .md-anchor { opacity: 1; }
-.prose .footnotes { font-size: .9em; color: var(--color-neutral-700); margin-top: 2em; }
-.prose .footnotes hr { border: 0; border-top: 1px solid var(--color-neutral-300); }
-.prose .footnote-ref a { text-decoration: none; font-size: .8em; }
-.prose table { margin: .8em 0; }
-.prose th { background: rgba(32,30,29,.04); }
-.prose hr { border: 0; border-top: 1px solid var(--color-neutral-300); margin: 1.6em 0; }
+.c-md { font-size: 15.5px; line-height: 1.65; }
+.c-md > :first-child { margin-top: 0; }
+.c-md h1, .c-md h2, .c-md h3, .c-md h4, .c-md h5, .c-md h6 { font-weight: 600; line-height: 1.25; margin: 1.3em 0 .5em; letter-spacing: -.01em; }
+.c-md h1 { font-size: 1.9em; padding-bottom: .25em; border-bottom: 1px solid var(--color-neutral-300); }
+.c-md h2 { font-size: 1.45em; padding-bottom: .2em; border-bottom: 1px solid rgba(32,30,29,.1); }
+.c-md h3 { font-size: 1.2em; } .c-md h4 { font-size: 1.05em; } .c-md h5, .c-md h6 { font-size: .95em; }
+.c-md p, .c-md ul, .c-md ol, .c-md pre, .c-md table, .c-md blockquote, .c-md details { margin: .65em 0; }
+.c-md ul { list-style: disc; padding-left: 1.6em; } .c-md ol { list-style: decimal; padding-left: 1.6em; }
+.c-md ul ul { list-style: circle; } .c-md li > ul, .c-md li > ol { margin: .2em 0; }
+.c-md a { color: var(--color-accent-700); text-decoration: underline; text-underline-offset: 2px; }
+.c-md img { display: inline-block; vertical-align: middle; }
+.c-md hr { border: 0; border-top: 1px solid var(--color-neutral-300); margin: 1.6em 0; }
+.c-md th { background: rgba(32,30,29,.04); font-weight: 600; }
+.c-md kbd { font-family: var(--font-mono); font-size: .85em; padding: 1px 5px; border: 1px solid var(--color-neutral-300); border-bottom-width: 2px; border-radius: 4px; background: #fff; }
+.c-md del, .c-md s { color: var(--color-neutral-600); }
+.c-md .task-list-item { list-style: none; }
+.c-md .contains-task-list { padding-left: 1.2em; }
+.c-md .task-list-item-checkbox { margin: 0 .45em 0 -1.2em; vertical-align: middle; accent-color: var(--color-accent-700); }
+.c-md .md-anchor { opacity: 0; text-decoration: none; margin-left: .25em; color: var(--color-accent-600); font-weight: 400; }
+.c-md h1:hover .md-anchor, .c-md h2:hover .md-anchor, .c-md h3:hover .md-anchor, .c-md h4:hover .md-anchor { opacity: 1; }
+.c-md .footnotes { font-size: .9em; color: var(--color-neutral-700); margin-top: 2em; }
+.c-md .footnotes ol { padding-left: 1.4em; }
+.c-md .footnote-ref a { text-decoration: none; font-size: .8em; }
+.c-md .md-img-blocked { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 1px 7px; border: 1px dashed var(--color-neutral-400); border-radius: 4px; color: var(--color-neutral-600); font-family: var(--font-mono); }
 `;
 
 export const DOC_CSS = `

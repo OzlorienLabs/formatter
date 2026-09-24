@@ -163,6 +163,8 @@ export type Req = {
   output?: string;
   proxy?: string;
   head: boolean;
+  /** Lower-case names of headers curl adds implicitly (e.g. the default form Content-Type). */
+  auto: string[];
   notes: string[];
 };
 
@@ -352,6 +354,7 @@ export function parseCurl(input: string): Req {
     notes.push(`-T uploads ${upload} as the request body.`);
   }
 
+  const auto: string[] = [];
   const hasHeader = (k: string) => headers.some(([h]) => h.toLowerCase() === k.toLowerCase());
   const u = new URL(url);
   if (get && pieces.length) {
@@ -385,7 +388,7 @@ export function parseCurl(input: string): Req {
       });
       body = { kind: "form", fields, text };
     } else body = { kind: "raw", text, file };
-    if (!hasHeader("Content-Type")) headers.push(["Content-Type", json ? "application/json" : "application/x-www-form-urlencoded"]);
+    if (!hasHeader("Content-Type")) { headers.push(["Content-Type", json ? "application/json" : "application/x-www-form-urlencoded"]); auto.push("content-type"); }
     if (json && !hasHeader("Accept")) headers.push(["Accept", "application/json"]);
   }
   if (cookies.length) headers.push(["Cookie", cookies.join("; ")]);
@@ -421,6 +424,7 @@ export function parseCurl(input: string): Req {
     output,
     proxy,
     head: method === "HEAD",
+    auto,
     notes,
   };
 }
@@ -528,7 +532,7 @@ function genFetch(r: Req): string {
   const pre: string[] = [];
   const opts: string[] = [];
   const multipart = r.body.kind === "multipart";
-  const h = hdrs(r, multipart ? ["content-type"] : []);
+  const h = hdrs(r, multipart || (r.body.kind === "form" && r.auto.includes("content-type")) ? ["content-type"] : []);
   if (r.auth?.type === "basic") h.push(["Authorization", `\u0000"Basic " + btoa(${jsS(`${r.auth.user}:${r.auth.pass}`)})`]);
   if (r.bearer) h.push(["Authorization", `Bearer ${r.bearer}`]);
   if (r.method !== "GET") opts.push(`method: ${jsS(r.method)}`);
@@ -538,7 +542,10 @@ function genFetch(r: Req): string {
   else if (b.kind === "form") {
     const dup = new Set(b.fields.map(([k]) => k)).size !== b.fields.length;
     opts.push(dup ? `body: new URLSearchParams([\n${b.fields.map(([k, v]) => `    [${jsS(k)}, ${jsS(v)}]`).join(",\n")},\n  ])` : `body: new URLSearchParams({\n${b.fields.map(([k, v]) => `    ${keyJs(k)}: ${jsS(v)}`).join(",\n")},\n  })`);
-  } else if (b.kind === "raw") opts.push(b.file ? `body: file, // contents of ${b.file}` : `body: ${jsS(b.text)}`);
+  } else if (b.kind === "raw") {
+    if (b.file) pre.push(`const file = fileInput.files[0]; // ${b.file}`);
+    opts.push(b.file ? "body: file" : `body: ${jsS(b.text)}`);
+  }
   else if (b.kind === "multipart") {
     pre.push("const form = new FormData();");
     for (const p of b.parts) {
@@ -570,7 +577,7 @@ function genAxios(r: Req): string {
     const dup = new Set(r.query.map(([k]) => k)).size !== r.query.length;
     cfg.push(dup ? `params: new URLSearchParams([\n${r.query.map(([k, v]) => `    [${jsS(k)}, ${jsS(v)}]`).join(",\n")},\n  ])` : `params: {\n${r.query.map(([k, v]) => `    ${keyJs(k)}: ${jsS(v)}`).join(",\n")},\n  }`);
   }
-  const h = hdrs(r, r.body.kind === "multipart" ? ["content-type"] : []);
+  const h = hdrs(r, r.body.kind === "multipart" || ((r.body.kind === "form" || r.body.kind === "json") && r.auto.includes("content-type")) ? ["content-type"] : []);
   if (r.bearer) h.push(["Authorization", `Bearer ${r.bearer}`]);
   if (h.length) cfg.push(`headers: {\n${h.map(([k, v]) => `    ${keyJs(k)}: ${jsS(v)}`).join(",\n")},\n  }`);
   if (r.auth) cfg.push(`auth: {\n    username: ${jsS(r.auth.user)},\n    password: ${jsS(r.auth.pass)},\n  }`);
@@ -614,6 +621,7 @@ function genPython(r: Req, lib: "requests" | "httpx"): string {
   const drop = ["cookie"];
   if (b.kind === "multipart") drop.push("content-type");
   if (b.kind === "json" && /^application\/json$/i.test(ctOf(r) ?? "")) drop.push("content-type");
+  if (b.kind === "form" && r.auto.includes("content-type")) drop.push("content-type");
   const h = hdrs(r, drop);
   if (r.bearer) h.push(["Authorization", `Bearer ${r.bearer}`]);
   const cookie = r.headers.find(([k]) => k.toLowerCase() === "cookie")?.[1];
@@ -722,7 +730,7 @@ function genPhp(r: Req): string {
   else if (r.method === "HEAD") L.push("curl_setopt($ch, CURLOPT_NOBODY, true);");
   else if (r.method !== "GET") L.push(`curl_setopt($ch, CURLOPT_CUSTOMREQUEST, ${phpS(r.method)});`);
   const b = r.body;
-  const h = hdrs(r, ["cookie", ...(b.kind === "multipart" ? ["content-type"] : [])]);
+  const h = hdrs(r, ["cookie", ...(b.kind === "multipart" || (b.kind === "form" && r.auto.includes("content-type")) ? ["content-type"] : [])]);
   if (r.bearer) h.push(["Authorization", `Bearer ${r.bearer}`]);
   if (h.length) L.push(`curl_setopt($ch, CURLOPT_HTTPHEADER, [\n${h.map(([k, v]) => `    ${phpS(`${k}: ${v}`)},`).join("\n")}\n]);`);
   const cookie = r.headers.find(([k]) => k.toLowerCase() === "cookie")?.[1];

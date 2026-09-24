@@ -157,7 +157,7 @@ function asciiRow(cp: number): AsciiRow {
     hex: hex2(cp).toUpperCase(),
     oct: cp.toString(8).padStart(3, "0"),
     bin: cp.toString(2).padStart(8, "0"),
-    ch: cp < 32 || cp === 127 || (cp >= 128 && cp < 160) ? printable(String.fromCharCode(cp)) : cp === 32 ? "␠" : cp === 160 ? "⍽" : String.fromCharCode(cp),
+    ch: cp < 32 || cp === 127 || (cp >= 128 && cp < 160) ? "" : cp === 32 ? "␠" : cp === 160 ? "⍽" : cp === 173 ? "(shy)" : String.fromCharCode(cp),
     html: name && cp > 32 ? `&${name};` : `&#${cp};`,
     esc: C_ESC[cp] ?? (cp < 32 || cp === 127 ? `\\x${hex2(cp).toUpperCase()}` : cp > 127 ? `\\u00${hex2(cp).toUpperCase()}` : String.fromCharCode(cp)),
     caret: cp < 32 ? `^${String.fromCharCode(cp + 64)}` : cp === 127 ? "^?" : "",
@@ -806,14 +806,17 @@ const specs: SpecModule = {
           ...(approx ? [`${approx} result(s) rounded to ${o.precision} decimals (marked ≈).`] : []),
         ],
         views: [
-          { label: "Results", out: { kind: "text", text } },
           {
             label: "Worksheet",
             out: {
               kind: "text",
-              text: res.results.map((r) => `${r.src.padEnd(w)}  ${r.exact ? "=" : "≈"} ${shown(r)}`).join("\n"),
+              wrap: true,
+              text: res.results
+                .map((r) => (shown(r).length > 48 ? `${r.src}\n  ${r.exact ? "=" : "≈"} ${shown(r)}` : `${r.src.padEnd(w)}  ${r.exact ? "=" : "≈"} ${shown(r)}`))
+                .join("\n"),
             },
           },
+          { label: "Results", out: { kind: "text", text, wrap: true } },
           {
             label: "Details",
             out: {
@@ -928,7 +931,8 @@ const specs: SpecModule = {
       const utf8 = utf8Encode(s).length;
       const whitespace = (s.match(/\s/gu) ?? []).length;
       const longest = lines.reduce((a, l) => Math.max(a, [...l].length), 0);
-      const invisible = (s.match(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g) ?? []).length;
+      // Invisible format characters standing on their own (a ZWJ inside an emoji sequence is legitimate).
+      const invisible = graphemes.filter((g) => /^[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]+$/u.test(g)).length;
       const emoji = graphemes.filter((g) => /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(g)).length;
       const wpm = Math.max(1, num(opts.wpm, 238)), spm = Math.max(1, num(opts.spm, 150));
       const items: Stat[] = [

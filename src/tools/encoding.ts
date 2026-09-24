@@ -65,6 +65,19 @@ function infoItems(d: ReturnType<typeof b64decode>, src: string): Stat[] {
   ];
 }
 
+/** A pixelated, enlarged copy of a small image — icons are hard to judge at 1×. */
+function zoomView(url: string, dims: { w: number; h: number } | null): View[] {
+  if (!dims || !dims.w || !dims.h || Math.max(dims.w, dims.h) >= 128) return [];
+  const k = Math.max(2, Math.floor(256 / Math.max(dims.w, dims.h)));
+  const checker = "background:#fff;background-image:linear-gradient(45deg,#eee 25%,transparent 25%),linear-gradient(-45deg,#eee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eee 75%),linear-gradient(-45deg,transparent 75%,#eee 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0";
+  return [
+    {
+      label: `Zoom ${k}×`,
+      out: { kind: "html", html: `<div style="display:inline-block;padding:8px;border-radius:6px;${checker}"><img src="${url}" width="${Math.round(dims.w * k)}" height="${Math.round(dims.h * k)}" style="image-rendering:pixelated;display:block" alt="Enlarged preview"></div><p>${dims.w} × ${dims.h} px, shown at ${k}×</p>` },
+    },
+  ];
+}
+
 /** Parse a URL-ish string into rows for the URL parts and query tables. */
 function urlViews(s: string): View[] {
   const t = s.trim();
@@ -329,10 +342,13 @@ const specs: SpecModule = {
       const views: View[] = [];
       if (decoded !== null) views.push({ label: "Decoded", out: { kind: "text", text: decoded, lang: magic?.ext === "json" ? "json" : magic?.ext === "svg" || magic?.ext === "xml" ? "xml" : magic?.ext === "html" ? "html" : "text", wrap: true } });
       else views.push({ label: "Hex dump", out: { kind: "text", text: dump } });
-      if (magic?.image) views.push({ label: "Image", out: { kind: "image", src: dataUrl(magic.mime, b64encode(bytes)), name: `decoded.${magic.ext}` } });
+      const dims = magic?.image ? imageSize(bytes, magic.mime) : null;
+      if (magic?.image) {
+        const u = dataUrl(magic.mime, b64encode(bytes));
+        views.push({ label: "Image", out: { kind: "image", src: u, name: `decoded.${magic.ext}` } }, ...zoomView(u, dims));
+      }
       if (magic?.mime === "application/pdf") views.push({ label: "PDF", out: { kind: "pdf", src: freshUrl("b64pdf", bytes, "application/pdf") } });
       if (decoded !== null) views.push({ label: "Hex dump", out: { kind: "text", text: dump } });
-      const dims = magic?.image ? imageSize(bytes, magic.mime) : null;
       views.push(
         stats("Info", [
           ...infoItems(d, src),
@@ -416,6 +432,7 @@ const specs: SpecModule = {
           notes: [...notes, ...b64Notes(d).filter((n) => !n.startsWith("Stripped"))],
           views: [
             { label: "Image", out: { kind: "image", src: url, name, alt: "Decoded image" } },
+            ...zoomView(url, dims),
             info,
             { label: "Hex", out: { kind: "text", text: hexdump(bytes, { limit: 512 }) } },
           ],
@@ -440,6 +457,7 @@ const specs: SpecModule = {
         views: [
           { label: labels[pick] ?? "Data URL", out: { kind: "text", text: snippets[pick] ?? url, wrap: true, lang: pick === "css" ? "css" : pick === "html" ? "html" : pick === "md" ? "markdown" : "text" } },
           { label: "Preview", out: { kind: "image", src: url, name: (inputs["file:name"] ?? "").split(" · ")[0] || `image.${magic.ext}`, alt } },
+          ...zoomView(url, dims),
           info,
           { label: "All snippets", out: { kind: "text", text: all, wrap: true } },
         ],

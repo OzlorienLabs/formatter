@@ -259,20 +259,7 @@ function Decode({ p, mono }: { p: CustomProps; mono: number }) {
           </div>
         )}
 
-        <Pane
-          title="Verify signature"
-          right={
-            fam === "HS" || !fam ? (
-              <label className="opt">
-                <span className="lbl">Secret is</span>
-                <select className="sel" value={enc} onChange={(e) => setOpt("enc", e.target.value)} style={{ fontSize: 13, padding: "3px 6px" }}>
-                  <option value="text">Text</option>
-                  <option value="base64">Base64</option>
-                  <option value="hex">Hex</option>
-                </select>
-              </label>
-            ) : undefined
-          }
+        <Pane title="Verify signature" right={fam === "HS" ? <span className="kv">secret read as {enc === "text" ? "UTF-8 text" : enc} — change under Secret is</span> : undefined}
         >
           <div className="sec">
             {alg && (
@@ -334,7 +321,9 @@ function Decode({ p, mono }: { p: CustomProps; mono: number }) {
               </div>
             ))}
             <Pane title="Header" color={C_HEAD} right={<CopyBtn text={JSON.stringify(jwt.header, null, 2)} />}>
-              <CodeView text={JSON.stringify(jwt.header, null, 2)} lang="json" fontSize={mono} />
+              <div className="scroll" style={{ maxHeight: 320, overflow: "auto" }}>
+                <CodeView text={JSON.stringify(jwt.header, null, 2)} lang="json" fontSize={mono} />
+              </div>
               <div className="legend" style={{ display: "grid", gap: 2 }}>
                 {Object.keys(jwt.header).filter((k) => HEADER_PARAMS[k]).map((k) => (
                   <span key={k}><b className="mono">{k}</b> — {HEADER_PARAMS[k]}</span>
@@ -354,7 +343,9 @@ function Decode({ p, mono }: { p: CustomProps; mono: number }) {
                   </>
                 }
               >
-                <CodeView text={jwt.payloadIsJson ? JSON.stringify(jwt.payload, null, 2) : jwt.payloadText} lang={jwt.payloadIsJson ? "json" : "text"} fontSize={mono} wrap />
+                <div className="scroll" style={{ maxHeight: 480, overflow: "auto" }}>
+                  <CodeView text={jwt.payloadIsJson ? JSON.stringify(jwt.payload, null, 2) : jwt.payloadText} lang={jwt.payloadIsJson ? "json" : "text"} fontSize={mono} wrap />
+                </div>
               </Pane>
             )}
             {rows.length > 0 && (
@@ -371,7 +362,7 @@ function Decode({ p, mono }: { p: CustomProps; mono: number }) {
                               <div style={{ fontSize: 12, color: k === "exp" && t?.state === "expired" ? BAD : k === "nbf" && t?.state === "notyet" ? BAD : "var(--color-neutral-600)" }}>{human}</div>
                             )}
                           </td>
-                          <td style={{ fontFamily: "var(--font-sans, inherit)", fontSize: 12.5, color: "var(--color-neutral-600)" }}>{meaning}</td>
+                          <td style={{ fontFamily: "var(--font-body)", fontSize: 12.5, color: "var(--color-neutral-600)" }}>{meaning}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -382,7 +373,7 @@ function Decode({ p, mono }: { p: CustomProps; mono: number }) {
           </>
         ) : (
           <section className="g pane" style={{ padding: 18, color: "var(--color-neutral-600)", fontSize: 14.5, lineHeight: 1.6 }}>
-            Paste a token to see its header, payload and claims. Nothing leaves this tab — decoding and signature checks run locally with WebCrypto.
+            {parsed.err ? "Fix the token on the left to see its header, payload and claims." : "Paste a token to see its header, payload and claims."} Nothing leaves this tab — decoding and signature checks run locally with WebCrypto.
           </section>
         )}
       </div>
@@ -543,16 +534,6 @@ function Sign({ p, mono }: { p: CustomProps; mono: number }) {
           title={fam === "HS" ? "Secret" : fam ? "Private key" : "Key"}
           right={
             <>
-              {(fam === "HS" || !fam) && (
-                <label className="opt">
-                  <span className="lbl">Secret is</span>
-                  <select className="sel" value={enc} onChange={(e) => setOpt("enc", e.target.value)} style={{ fontSize: 13, padding: "3px 6px" }}>
-                    <option value="text">Text</option>
-                    <option value="base64">Base64</option>
-                    <option value="hex">Hex</option>
-                  </select>
-                </label>
-              )}
               {fam && (
                 <button type="button" className="btn btn-sm" onClick={generate} disabled={busy}>
                   <ToolIcon name="key" size={14} /> {busy ? "Generating…" : fam === "HS" ? "Random secret" : "New key pair"}
@@ -612,6 +593,7 @@ function Sign({ p, mono }: { p: CustomProps; mono: number }) {
           )}
         </Pane>
         <section className="g pane" style={{ padding: "12px 14px", fontSize: 13.5, lineHeight: 1.55, color: "var(--color-neutral-700)" }}>
+          <p style={{ margin: 0 }}>
           <b>Registered claims:</b>{" "}
           {["iss", "sub", "aud", "exp", "nbf", "iat", "jti"].map((c, i) => (
             <span key={c}>
@@ -620,6 +602,7 @@ function Sign({ p, mono }: { p: CustomProps; mono: number }) {
             </span>
           ))}
           . Times are seconds since 1970 (NumericDate). Keep secrets at least as long as the hash: 32 bytes for HS256.
+          </p>
         </section>
       </div>
     </div>
