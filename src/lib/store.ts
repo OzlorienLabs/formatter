@@ -1,5 +1,6 @@
 "use client";
 
+import type { PipelineStep } from "./collections";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export const KEYS = {
@@ -20,10 +21,19 @@ export type HistoryEntry = {
   slug: string;
   name: string;
   t: number;
+  /** Snippet of the primary input, for display. */
   fin: string;
+  /** Snippet of the output, for display. */
   fout: string;
+  /** Legacy single option value. */
   opt: string;
+  /** Every input field, so Restore brings back the exact state. */
+  inputs?: Record<string, string>;
+  opts?: Record<string, string | number | boolean>;
 };
+
+/** Inputs larger than this are not stored whole — history must stay small. */
+export const MAX_HISTORY_INPUT = 20_000;
 
 export type Settings = {
   glass: boolean;
@@ -95,9 +105,24 @@ export function toggleFav(favs: string[], slug: string): string[] {
  * not fill the drawer.
  */
 export function pushHistory(history: HistoryEntry[], entry: HistoryEntry): HistoryEntry[] {
+  const same = (h: HistoryEntry) =>
+    h.slug === entry.slug &&
+    h.fin === entry.fin &&
+    JSON.stringify(h.inputs ?? null) === JSON.stringify(entry.inputs ?? null) &&
+    JSON.stringify(h.opts ?? null) === JSON.stringify(entry.opts ?? null);
   const newest = history[0];
-  if (newest && newest.slug === entry.slug && newest.fin === entry.fin) return history;
-  return [entry, ...history].slice(0, MAX_HISTORY);
+  if (newest && same(newest)) return history;
+  // Re-running something already in history moves it to the top instead of duplicating it.
+  return [entry, ...history.filter((h) => !same(h))].slice(0, MAX_HISTORY);
+}
+
+/** Keeps an input map within the storage budget, trimming the largest fields first. */
+export function clampInputs(inputs: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(inputs)) {
+    out[k] = typeof v === "string" && v.length > MAX_HISTORY_INPUT ? v.slice(0, MAX_HISTORY_INPUT) : v;
+  }
+  return out;
 }
 
 export function newEntryId(): string {
@@ -235,7 +260,17 @@ export function useHistory() {
     write(KEYS.history, []);
   }, [ref]);
 
-  return { history, record, remove, clear };
+  const clearFor = useCallback(
+    (slug: string) => {
+      const next = ref.current.filter((h) => h.slug !== slug);
+      ref.current = next;
+      setHistory(next);
+      write(KEYS.history, next);
+    },
+    [ref]
+  );
+
+  return { history, record, remove, clear, clearFor };
 }
 
 export function useSettings() {
@@ -288,6 +323,18 @@ export function useToast() {
   return { toast, flash };
 }
 
+/**
+ * A request to open a tool with a given state — from history, a workspace or
+ * a recipe. The tool page consumes it on mount.
+ */
+export type RestoreRequest = {
+  slug: string;
+  input: string;
+  opt: string;
+  inputs?: Record<string, string>;
+  opts?: Record<string, string | number | boolean>;
+};
+
 /** Assembled once, in AppStateProvider. Nothing else calls the hooks above. */
 export function useAppStateValue() {
   const favourites = useFavourites();
@@ -300,10 +347,10 @@ export function useAppStateValue() {
   const [drawer, setDrawer] = useState<null | "history" | "settings">(null);
   const [railOpen, setRailOpen] = useState(true);
   const [railMobile, setRailMobile] = useState(false);
-  const [pipeline, setPipeline] = useState<string[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineStep[]>([]);
   const [pipeSource, setPipeSource] = useState("");
   // A history restore hands the tool page its input across the navigation.
-  const [restoreReq, setRestoreReq] = useState<{ slug: string; input: string; opt: string } | null>(null);
+  const [restoreReq, setRestoreReq] = useState<RestoreRequest | null>(null);
 
   return useMemo(
     () => ({
@@ -313,6 +360,7 @@ export function useAppStateValue() {
       record: history.record,
       removeHistory: history.remove,
       clearHistory: history.clear,
+      clearHistoryFor: history.clearFor,
       clearFavs: favourites.clear,
       settings,
       toast: toast.toast,

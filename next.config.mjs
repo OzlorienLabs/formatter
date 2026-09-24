@@ -4,7 +4,7 @@ const nextConfig = {
   poweredByHeader: false,
   // static-first, no custom server, Vercel-ready
   experimental: {
-    optimizePackageImports: ["lucide-react"],
+    optimizePackageImports: ["@phosphor-icons/react"],
   },
 };
 

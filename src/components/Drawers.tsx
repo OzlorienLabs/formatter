@@ -123,7 +123,7 @@ function HistoryBody() {
                 type="button"
                 style={ghost}
                 onClick={() => {
-                  setRestoreReq({ slug: h.slug, input: h.fin, opt: h.opt });
+                  setRestoreReq({ slug: h.slug, input: h.fin, opt: h.opt, inputs: h.inputs, opts: h.opts });
                   setDrawer(null);
                   router.push(`/tools/${h.slug}`);
                 }}
