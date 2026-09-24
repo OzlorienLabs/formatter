@@ -6,7 +6,14 @@
 import type { SpecModule, ToolSpec } from "./types";
 import { toolBySlug, categoryOfTool } from "@/src/lib/tools-registry";
 
-const LOADERS: Record<string, () => Promise<{ default: SpecModule }>> = {
+type Loaders = Record<string, () => Promise<{ default: SpecModule }>>;
+
+/**
+ * Tool code only ever runs in the browser (unit tests use jsdom). Next.js replaces
+ * `typeof window` with a constant per build, so on the server this branch is
+ * dead and webpack never pulls the tool modules into the server bundle.
+ */
+const LOADERS: Loaders = typeof window === "undefined" ? ({} as Loaders) : {
   json: () => import("./json"),
   encoding: () => import("./encoding"),
   "binary-numbers": () => import("./binary"),
@@ -25,6 +32,11 @@ const LOADERS: Record<string, () => Promise<{ default: SpecModule }>> = {
   ascii: () => import("./ascii"),
   time: () => import("./time"),
 };
+
+const ALL_CATEGORIES = [
+  "json", "encoding", "binary-numbers", "converters", "validators", "xml", "formatters-text", "sql-data",
+  "security", "regex-api", "languages", "visual-canvas", "diagrams", "generators-devops", "image-color-seo", "ascii", "time",
+];
 
 const cache = new Map<string, Promise<SpecModule>>();
 
@@ -45,4 +57,4 @@ export async function loadSpec(slug: string): Promise<ToolSpec | null> {
   return mod[slug] ?? null;
 }
 
-export const CATEGORY_MODULES = Object.keys(LOADERS);
+export const CATEGORY_MODULES = ALL_CATEGORIES;
