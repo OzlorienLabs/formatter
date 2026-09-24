@@ -30,6 +30,7 @@
     "figlet": "^1.7.0",
     "graphql": "^16.14.2",
     "hyparquet": "^1.31.1",
+    "hyparquet-compressors": "^1.1.2",
     "jq-wasm": "^3.0.0-jq-1.8.2",
     "js-yaml": "^4.1.0",
     "jsondiffpatch": "^0.6.0",

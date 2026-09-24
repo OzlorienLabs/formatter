@@ -410,9 +410,9 @@ const specs: SpecModule = {
     custom: () => import("./ui/D-SqlAnalytics"),
     action: "Run query",
     async run({ inputs, opts }) {
-      const { runAnalytics, chartSvg } = await import("./lib/D-analytics");
+      const { runAnalytics, chartSvg, parseWorkspace } = await import("./lib/D-analytics");
       const S = await sqlite();
-      const sql = inputs.sql.trim() || (inputs.datasets.trim() && !inputs.datasets.trim().startsWith("{\"tables\"") ? "SELECT * FROM input LIMIT 100" : "");
+      const sql = inputs.sql.trim() || (inputs.datasets.trim() && !parseWorkspace(inputs.datasets) ? "SELECT * FROM input LIMIT 100" : "");
       if (!sql) throw new ToolError("Write a SQL query to run over your datasets.");
       const r = await runAnalytics(inputs.datasets, sql, { maxRows: num(opts.maxRows, 1000) });
       const last = [...r.results].reverse().find((x) => x.columns.length);
@@ -679,10 +679,11 @@ const specs: SpecModule = {
       const totalRows = Number(md.num_rows);
       let rows: Record<string, unknown>[];
       try {
-        rows = (await hp.parquetReadObjects({ file: ab, metadata: md, columns: want.length ? want : undefined, rowStart: 0, rowEnd: Math.min(limit, totalRows) })) as Record<string, unknown>[];
+        const { compressors } = await import("hyparquet-compressors");
+        rows = (await hp.parquetReadObjects({ file: ab, metadata: md, compressors, columns: want.length ? want : undefined, rowStart: 0, rowEnd: Math.min(limit, totalRows) })) as Record<string, unknown>[];
       } catch (e) {
         const msg = (e as Error).message;
-        throw new ToolError(/compression|codec|unsupported/i.test(msg) ? `${msg}. This viewer decodes UNCOMPRESSED and SNAPPY files; re-save with snappy to view it.` : `Could not decode the data: ${msg}`);
+        throw new ToolError(/compression|codec|unsupported/i.test(msg) ? `${msg}. Supported codecs: uncompressed, Snappy, GZIP, ZSTD, Brotli, LZ4.` : `Could not decode the data: ${msg}`);
       }
       const cols = want.length ? want : top;
       // Per top-level column: DATE columns print as YYYY-MM-DD, FLOAT (32-bit) at single precision.
@@ -773,7 +774,10 @@ const specs: SpecModule = {
       if (!pipeline && !isNode) {
         try {
           const { renderMermaid } = await import("./lib/mermaid");
-          const svg = await renderMermaid(code, { theme: str(opts.theme) as "neutral" });
+          let svg = await renderMermaid(code, { theme: str(opts.theme) as "neutral" });
+          // Give the SVG its natural size (Mermaid emits width="100%" + max-width, which collapses in the zoomable view).
+          const vb = /viewBox="[-\d.]+ [-\d.]+ ([\d.]+) ([\d.]+)"/.exec(svg);
+          if (vb) svg = svg.replace(/<svg([^>]*?)\swidth="100%"/, `<svg$1 width="${Math.ceil(+vb[1])}" height="${Math.ceil(+vb[2])}"`).replace(/(<svg[^>]*?)\sstyle="max-width:[^"]*"/, "$1");
           views.push({ label: "Diagram", out: { kind: "svg", svg, name: "er-diagram" } });
         } catch (e) {
           renderErr = (e as Error).message;

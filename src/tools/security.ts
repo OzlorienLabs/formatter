@@ -231,7 +231,7 @@ const specs: SpecModule = {
           return H.timingSafeEqual(expBytes, mac);
         });
         verdict = ok ? "✓ Signature valid" : "✗ Signature mismatch";
-        views.unshift({ label: ok ? "✓ Valid" : "✗ Mismatch", out: { kind: "status", ok, title: verdict, detail: ok ? "Compared in constant time against the computed HMAC." : `Expected ${exp}\nComputed ${text}\nCheck the secret, the hash, the key encoding and that the message is byte-for-byte what was signed (raw body, no reformatting).` } });
+        views.unshift({ label: ok ? "✓ Valid" : "✗ Mismatch", out: { kind: "status", ok, title: ok ? "Signature valid" : "Signature mismatch", detail: ok ? "Compared in constant time against the computed HMAC." : `Expected ${exp}\nComputed ${text}\nCheck the secret, the hash, the key encoding and that the message is byte-for-byte what was signed (raw body, no reformatting).` } });
       }
       views.push({
         label: "Details",
@@ -280,6 +280,7 @@ const specs: SpecModule = {
   "password-generator": {
     inputs: [],
     generator: true,
+    layout: "stack",
     options: [
       { id: "mode", label: "Mode", type: "segment", choices: [["random", "Random"], ["passphrase", "Passphrase"], ["pin", "PIN"], ["pronounceable", "Pronounceable"]], default: "random" },
       { id: "length", label: "Length", type: "number", default: 20, min: 4, max: 256, show: (o) => o.mode !== "passphrase" },
@@ -384,6 +385,7 @@ const specs: SpecModule = {
   "token-generator": {
     inputs: [],
     generator: true,
+    layout: "stack",
     options: [
       { id: "type", label: "Type", type: "select", choices: [["hex", "Hex"], ["base64", "Base64"], ["base64url", "Base64url"], ["alnum", "Alphanumeric (base62)"], ["uuid4", "UUID v4"], ["uuid7", "UUID v7 (time-ordered)"], ["ulid", "ULID"], ["nanoid", "NanoID"], ["apikey", "Prefixed API key"], ["otp", "Numeric OTP"]], default: "hex" },
       { id: "count", label: "Count", type: "number", default: 5, min: 1, max: 500 },
@@ -614,7 +616,7 @@ $ mysql -h db.local -u root --password=CorrectHorseBattery9
     options: [
       { id: "index", label: "Show certificate #", type: "number", default: 1, min: 1, max: 20 },
       { id: "verify", label: "Verify signatures", type: "toggle", default: true, hint: "Check each signature with the next certificate's public key (SubtleCrypto)" },
-      { id: "at", label: "Validity at", type: "text", default: "", placeholder: "now (or 2027-01-01)", width: 130 },
+      { id: "at", label: "Validity at", type: "text", default: "", placeholder: "now", width: 120, hint: "Check validity at another date, e.g. 2027-01-01" },
     ],
     async run({ inputs, opts }) {
       const A = await import("./lib/D-asn1");
@@ -674,7 +676,7 @@ $ mysql -h db.local -u root --password=CorrectHorseBattery9
         const self = x.kind === "certificate" && A.dnKey(x.subject) === A.dnKey(x.issuer);
         const link = x.kind === "csr" ? "CSR" : self ? "self-signed (root)" : !next ? "issuer not supplied" : A.dnKey(x.issuer) === A.dnKey(next.subject) ? (x.aki && next.ski && x.aki !== next.ski ? "✗ name matches, key id differs" : "✓ issued by next") : "✗ issuer ≠ next subject";
         const st = x.kind === "csr" ? "—" : now < x.notBefore! ? "not yet valid" : now > x.notAfter! ? "EXPIRED" : `valid (${days(x.notAfter!.getTime() - now.getTime())} d)`;
-        return [i + 1, x.subject.find((r) => r.name === "CN")?.value ?? A.dnString(x.subject), x.kind === "csr" ? "—" : x.issuer.find((r) => r.name === "CN")?.value ?? A.dnString(x.issuer), x.isCA ? "CA" : x.kind === "csr" ? "CSR" : "leaf", `${x.keyAlg} ${x.keyBits ?? ""}`.trim(), st, link, bool(opts.verify) ? sigText(verdicts[i]) : "off"];
+        return [x.subject.find((r) => r.name === "CN")?.value ?? A.dnString(x.subject), x.kind === "csr" ? "—" : x.issuer.find((r) => r.name === "CN")?.value ?? A.dnString(x.issuer), x.isCA ? "CA" : x.kind === "csr" ? "CSR" : "leaf", `${x.keyAlg} ${x.keyBits ?? ""}`.trim(), st, link, bool(opts.verify) ? sigText(verdicts[i]) : "off"];
       });
       const chainOk = certs.every((x, i) => i === certs.length - 1 || x.kind === "csr" || A.dnKey(x.issuer) === A.dnKey(certs[i + 1].subject));
       const b64 = btoa(String.fromCharCode(...c.der));
@@ -700,14 +702,14 @@ $ mysql -h db.local -u root --password=CorrectHorseBattery9
         "",
         "Extensions:",
         ...c.extensions.map((x) => `  ${x.name}${x.critical ? " (critical)" : ""}: ${x.value}`),
-        ...(certs.length > 1 ? ["", "Chain:", ...chainRows.map((r) => `  ${r[0]}. ${r[1]} ← ${r[2]} · ${r[5]} · ${r[6]}${bool(opts.verify) ? ` · ${r[7]}` : ""}`)] : []),
+        ...(certs.length > 1 ? ["", "Chain:", ...chainRows.map((r, i) => `  ${i + 1}. ${r[0]} ← ${r[1]} · ${r[4]} · ${r[5]}${bool(opts.verify) ? ` · ${r[6]}` : ""}`)] : []),
       ].join("\n");
       const expiredAny = certs.some((x) => x.kind === "certificate" && now > x.notAfter!);
       const views: View[] = [
         { label: "Summary", out: { kind: "table", columns: ["field", "value"], rows: summary } },
         { label: `Extensions (${c.extensions.length})`, out: c.extensions.length ? { kind: "table", columns: ["extension", "critical", "value", "OID"], rows: extRows } : { kind: "status", ok: true, title: "No extensions", detail: c.version < 3 ? "Version 1/2 certificates carry no extensions." : "" } },
       ];
-      if (certs.length > 1) views.push({ label: `Chain (${certs.length})`, out: { kind: "table", columns: ["#", "subject CN", "issuer CN", "role", "key", "validity", "link", "signature"], rows: chainRows } });
+      if (certs.length > 1) views.push({ label: `Chain (${certs.length})`, out: { kind: "table", columns: ["subject CN", "issuer CN", "role", "key", "validity", "link", "signature"], rows: chainRows } });
       views.push(
         { label: "Status", out: { kind: "status", ok: c.kind === "csr" || (status === "Valid" && chainOk && !verdicts.includes(false)), title: c.kind === "csr" ? "Certificate signing request" : `${status}${expiredAny && status === "Valid" ? " (another certificate in the chain is expired)" : ""}${!chainOk ? " — chain order broken" : ""}`, detail: c.kind === "csr" ? `Requests ${dn(c.subject)}${c.san.length ? `\nSANs: ${c.san.join(", ")}` : ""}` : `${c.notBefore!.toUTCString()} → ${c.notAfter!.toUTCString()}\nChecked at ${now.toUTCString()}` } },
         { label: "ASN.1 tree", out: { kind: "tree", value: c.tree } },

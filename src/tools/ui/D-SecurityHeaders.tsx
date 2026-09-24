@@ -25,7 +25,7 @@ const CSS = `
 .shh .perm label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 12.5px; }
 .shh .perm .sel { font-size: 12.5px; padding: 3px 6px; }
 .shh .out { position: sticky; top: 12px; display: grid; gap: 14px; min-width: 0; }
-.shh .grade { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+.shh .grade { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 12px 14px; }
 .shh .grade b { font-size: 38px; line-height: 1; font-family: var(--font-mono); letter-spacing: -.04em; min-width: 64px; text-align: center; padding: 8px 6px; border-radius: 12px; color: #fff; }
 .shh .checks { display: grid; gap: 6px; padding: 10px 12px 14px; }
 .shh .ck { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 8px 10px; border-radius: var(--radius-md); font-size: 13.5px; line-height: 1.45; }
