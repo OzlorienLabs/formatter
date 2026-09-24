@@ -200,23 +200,31 @@ export default function Rail() {
 
       <div style={{ flex: 1 }} />
       <div style={{ padding: "0 10px" }}>
-        <Link
-          className="ctl"
-          href="/pipelines"
-          onClick={() => setRailMobile(false)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            width: "100%",
-            padding: "8px 6px",
-            fontSize: 14.5,
-            color: "var(--color-neutral-800)",
-          }}
-        >
-          <ToolIcon name="flow-arrow" size={18} />
-          {railOpen && <span>Pipelines</span>}
-        </Link>
+        {[
+          ["/pipelines", "flow-arrow", "Pipelines"],
+          ["/recipes", "cards-three", "Recipes"],
+          ["/workspaces", "folders", "Workspaces"],
+        ].map(([href, icon, text]) => (
+          <Link
+            key={href}
+            className="ctl"
+            href={href}
+            title={text}
+            onClick={() => setRailMobile(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              padding: "8px 6px",
+              fontSize: 14.5,
+              color: pathname === href ? "var(--color-accent-800)" : "var(--color-neutral-800)",
+            }}
+          >
+            <ToolIcon name={icon} size={18} />
+            {railOpen && <span>{text}</span>}
+          </Link>
+        ))}
         <button
           className="ctl"
           type="button"

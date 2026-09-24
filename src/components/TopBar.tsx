@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import ToolIcon from "./ToolIcon";
 import { useApp } from "./AppState";
 import { categoryBySlug, categoryOfTool, toolBySlug } from "@/src/lib/tools-registry";
+import { useOnline } from "@/src/lib/offline";
 
 const crumbLink: React.CSSProperties = {
   border: 0,
@@ -18,6 +19,8 @@ const crumbLink: React.CSSProperties = {
 export default function TopBar() {
   const pathname = usePathname();
   const { history, setDrawer, setPaletteOpen, railMobile, setRailMobile, railOpen, setRailOpen } = useApp();
+  const online = useOnline();
+  const section = pathname === "/pipelines" ? "Pipelines" : pathname === "/recipes" ? "Recipes" : pathname === "/workspaces" ? "Workspaces" : null;
 
   const toolSlug = pathname.startsWith("/tools/") ? pathname.slice("/tools/".length) : null;
   const tool = toolSlug ? toolBySlug(toolSlug) : null;
@@ -64,6 +67,12 @@ export default function TopBar() {
             </Link>
           </>
         )}
+        {section && (
+          <>
+            <span style={{ color: "var(--color-neutral-500)" }}>/</span>
+            <strong style={{ fontWeight: 600, fontSize: 14.5 }}>{section}</strong>
+          </>
+        )}
         {tool && (
           <>
             <span style={{ color: "var(--color-neutral-500)" }}>/</span>
@@ -77,6 +86,16 @@ export default function TopBar() {
       </nav>
 
       <div style={{ flex: 1 }} />
+
+      {!online && (
+        <span
+          className="mono"
+          title="You are offline. Tools keep working from the local cache."
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 9px", borderRadius: 999, background: "rgba(237,187,0,.16)", color: "var(--plate-y)", fontSize: 12 }}
+        >
+          <ToolIcon name="wifi-slash" size={14} /> offline
+        </span>
+      )}
 
       <button
         className="ctl gi"

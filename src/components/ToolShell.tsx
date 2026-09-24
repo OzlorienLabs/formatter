@@ -183,8 +183,13 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
         let initial = exampleState(s, s.examples[0]);
         let ex: number | null = 0;
         if (restoreReq && restoreReq.slug === tool.slug) {
+          const primaryId = s.inputs[0]?.id;
           initial = {
-            inputs: { ...emptyInputs(s), ...(restoreReq.inputs ?? (s.inputs[0] ? { [s.inputs[0].id]: restoreReq.input } : {})) },
+            inputs: {
+              ...emptyInputs(s),
+              ...(primaryId && restoreReq.input ? { [primaryId]: restoreReq.input } : {}),
+              ...(restoreReq.inputs ?? {}),
+            },
             opts: { ...defaultOpts(s), ...(restoreReq.opts ?? {}) },
           };
           ex = null;
@@ -382,7 +387,7 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
       </span>
       <div className="chips">
         {spec.examples.map((ex, i) => (
-          <button key={ex.label} type="button" className="chip ctl" aria-pressed={exIndex === i} onClick={() => loadExample(i)} title={ex.note}>
+          <button key={ex.label} type="button" className="chip ctl" aria-pressed={exIndex === i} onClick={() => loadExample(i)} title={ex.note} data-example-error={ex.error ? "1" : undefined}>
             {ex.label}
           </button>
         ))}
@@ -584,7 +589,7 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
   const stacked = spec.layout === "stack";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }} data-testid="tool-ready" data-running={running ? "1" : "0"}>
       {header}
       {exampleStrip}
       {toolbar}

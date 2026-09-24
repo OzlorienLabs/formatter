@@ -7,6 +7,7 @@ import CommandPalette from "./CommandPalette";
 import Drawers from "./Drawers";
 import Toast from "./Toast";
 import { useApp } from "./AppState";
+import { useOfflineBridge } from "@/src/lib/offline";
 
 /**
  * The workbench: a `252px minmax(0,1fr)` grid. The main column is pinned to
@@ -20,6 +21,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { settings, railOpen } = useApp();
   const isLanding = pathname === "/";
+  useOfflineBridge();
 
   const modeClass = `${settings.glass ? "" : "flat "}${settings.motion ? "" : "calm"}`.trim();
 

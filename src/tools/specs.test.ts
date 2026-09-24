@@ -29,7 +29,7 @@ describe.each(TOOLS.filter((t) => !PLATFORM.has(t.slug) && (!ONLY || ONLY.some((
     it("runs every example", async () => {
       const mod = await loadCategory(categoryOfTool(tool).slug);
       const spec = mod[slug];
-      if (!spec?.run || (spec as { skipNodeTest?: boolean }).skipNodeTest) return;
+      if (!spec?.run || spec.skipNodeTest) return;
       for (const ex of spec.examples) {
         const opts = { ...defaultOpts(spec), ...(ex.opts ?? {}) } as Opts;
         if (ex.error) {

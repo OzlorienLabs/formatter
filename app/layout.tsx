@@ -19,7 +19,10 @@ const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
 });
 
+export const viewport = { themeColor: "#0088b0" };
+
 export const metadata = {
+  manifest: "/manifest.webmanifest",
   title: "Formatter — 125 tools that never leave the tab",
   description:
     "JSON, encoding, converters, validators, SQL, security, diagrams — a hundred and twenty-five developer tools, every one of them running in your browser.",

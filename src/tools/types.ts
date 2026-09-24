@@ -144,6 +144,8 @@ export type ToolSpec = {
   tips?: string[];
   /** Label for the primary action, e.g. "Generate", "Execute". */
   action?: string;
+  /** Needs a real browser (canvas, WebGL, workers): skip the jsdom example test. */
+  skipNodeTest?: boolean;
 };
 
 export type SpecModule = Record<string, ToolSpec>;

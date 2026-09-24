@@ -5,6 +5,58 @@ import Drawer from "./Drawer";
 import ToolIcon from "./ToolIcon";
 import { useApp } from "./AppState";
 import { categoryOfTool, plateInk, toolBySlug } from "@/src/lib/tools-registry";
+import { useEffect, useState } from "react";
+import { clearOfflineCache, makeEverythingOffline, useOnline } from "@/src/lib/offline";
+import { COLLECTION_KEYS, saveList, storageBytes, usePipelines, useWorkspaces } from "@/src/lib/collections";
+import { fmtBytes } from "./tool/FileField";
+
+function OfflineSection() {
+  const online = useOnline();
+  const [sw, setSw] = useState<"none" | "off" | "on">("none");
+  const [progress, setProgress] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    setSw(navigator.serviceWorker.controller ? "on" : "off");
+  }, []);
+  return (
+    <div>
+      <p style={sectionLabel}>Offline</p>
+      <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--color-neutral-700)", lineHeight: 1.55 }}>
+        {online ? "You are online." : "You are offline — cached tools keep working."}{" "}
+        {sw === "on"
+          ? "Pages and tool code are cached automatically as you browse."
+          : sw === "off"
+            ? "The offline cache activates after the next reload."
+            : "This browser does not support offline caching."}
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 9, alignItems: "center" }}>
+        <button
+          className="ctl"
+          type="button"
+          disabled={busy || sw === "none"}
+          onClick={async () => {
+            setBusy(true);
+            setProgress("Preparing…");
+            const n = await makeEverythingOffline((d, t) => setProgress(`${d} / ${t}`));
+            setProgress(`Done — ${n} files cached`);
+            setBusy(false);
+          }}
+          style={{ ...ghost, padding: "8px 14px", fontSize: 14 }}
+        >
+          Make every tool available offline
+        </button>
+        <button className="ctl" type="button" disabled={sw === "none"} onClick={() => { void clearOfflineCache(); setProgress("Offline cache cleared"); }} style={{ ...ghost, padding: "8px 14px", fontSize: 14 }}>
+          Clear offline cache
+        </button>
+      </div>
+      {progress && <p className="mono" style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--color-neutral-700)" }}>{progress}</p>}
+      <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--color-neutral-600)", lineHeight: 1.5 }}>
+        Includes the WebAssembly runtimes (Python, SQLite, OpenSCAD, jq, three.js) — about 30 MB, downloaded from this site only.
+      </p>
+    </div>
+  );
+}
 
 function ago(t: number) {
   const s = (Date.now() - t) / 1000;
@@ -169,6 +221,10 @@ function HistoryBody() {
 
 function SettingsBody() {
   const { settings, history, favs, clearHistory, clearFavs, flash } = useApp();
+  const workspaces = useWorkspaces();
+  const pipelines = usePipelines();
+  const [bytes, setBytes] = useState(0);
+  useEffect(() => setBytes(storageBytes()), [history, favs, workspaces, pipelines]);
 
   return (
     <div style={{ display: "grid", gap: "var(--space-6)" }}>
@@ -254,7 +310,7 @@ function SettingsBody() {
       <div>
         <p style={sectionLabel}>Local data</p>
         <p style={{ margin: "0 0 12px", fontSize: 14, color: "var(--color-neutral-700)", lineHeight: 1.55 }}>
-          {history.length} history entries and {favs.length} favourites are held in this browser. Nothing is synced.
+          {history.length} history entries, {favs.length} favourites, {workspaces.length} workspaces and {pipelines.length} saved pipelines are held in this browser ({fmtBytes(bytes)}). Nothing is synced.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
           <button
@@ -279,8 +335,31 @@ function SettingsBody() {
           >
             Clear favourites
           </button>
+          <button
+            className="ctl"
+            type="button"
+            data-testid="delete-all-data"
+            onClick={() => {
+              if (!confirm("Delete ALL local data — history, favourites, workspaces, saved pipelines, mock API routes and settings? This cannot be undone.")) return;
+              clearHistory();
+              clearFavs();
+              saveList(COLLECTION_KEYS.workspaces, []);
+              saveList(COLLECTION_KEYS.pipelines, []);
+              try {
+                for (const k of Object.keys(localStorage)) if (k.startsWith("fmt:") && k !== COLLECTION_KEYS.seeded) localStorage.removeItem(k);
+              } catch {
+                /* ignore */
+              }
+              flash("All local data deleted");
+            }}
+            style={{ ...ghost, padding: "8px 14px", fontSize: 14, color: "var(--color-accent-2-700)" }}
+          >
+            Delete all local data
+          </button>
         </div>
       </div>
+
+      <OfflineSection />
     </div>
   );
 }

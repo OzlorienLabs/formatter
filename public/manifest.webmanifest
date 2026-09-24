@@ -1,1 +1,22 @@
-{"name":"Formatter","short_name":"Formatter","start_url":"/","display":"standalone","background_color":"#f3f2f2","theme_color":"#0088b0","icons":[]}
+{
+  "name": "Formatter — developer tools that never leave the tab",
+  "short_name": "Formatter",
+  "description": "125 developer tools — JSON, encoding, SQL, regex, diagrams, generators — running entirely in your browser, offline.",
+  "start_url": "/tools",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f2f2",
+  "theme_color": "#0088b0",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "JSON Formatter", "url": "/tools/json-formatter" },
+    { "name": "Pipelines", "url": "/pipelines" },
+    { "name": "Workspaces", "url": "/workspaces" }
+  ]
+}
