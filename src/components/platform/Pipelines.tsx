@@ -452,7 +452,7 @@ export default function Pipelines() {
             />
           ))}
 
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 4 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 4, position: "relative", zIndex: 5 }}>
             <span style={{ position: "relative" }}>
               <button type="button" className="btn" onClick={() => setPicker(!picker)} aria-expanded={picker} data-testid="add-step">
                 <ToolIcon name="plus" size={15} /> Add step

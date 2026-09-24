@@ -399,7 +399,7 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
   );
 
   const toolbar = (
-    <div className="g2" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: "12px clamp(16px,2.4vw,28px) 0", padding: "8px 10px", borderRadius: "var(--radius-lg)", flex: "none", position: "relative" }}>
+    <div className="g2" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: "12px clamp(16px,2.4vw,28px) 0", padding: "8px 10px", borderRadius: "var(--radius-lg)", flex: "none", position: "relative", zIndex: 5 }}>
       {spec.run && (
         <button className="btn btn-primary ctl" type="button" onClick={() => void run(true)} disabled={running && spec.autorun === false} title="Run (Ctrl/⌘ + Enter)">
           <ToolIcon name={running ? "arrows-clockwise" : "play"} size={15} color="#fff" />
