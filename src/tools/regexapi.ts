@@ -35,6 +35,45 @@ async function runRegex(req: RxReq, ms = 1000): Promise<RxOut> {
   return out;
 }
 
+const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const MATRIX_CSS = `
+.e-cm { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; }
+.prose .e-cm th, .prose .e-cm td { border: 0; border-bottom: 1px solid rgba(32,30,29,.08); padding: 6px 8px; vertical-align: top; }
+.e-cm th { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-neutral-600); font-weight: 500; text-align: center; white-space: nowrap; }
+.e-cm th:first-child, .e-cm td:first-child { text-align: left; }
+.prose .e-cm td.c { text-align: center; font-family: var(--font-mono); font-weight: 700; width: 1%; min-width: 34px; padding: 6px 3px; font-size: 14.5px; }
+.prose .e-cm th { padding: 6px 3px; letter-spacing: .02em; font-size: 11px; }
+.e-cm td:first-child { min-width: 170px; }
+.e-cm-wrap { overflow-x: auto; }
+.e-cm td.yes { color: oklch(48% .12 150); background: rgba(0,160,90,.07); }
+.e-cm td.no { color: var(--color-accent-2-700); background: rgba(214,0,108,.07); }
+.e-cm td.partial { color: oklch(50% .12 70); background: rgba(237,187,0,.12); }
+.e-cm tr.v td:first-child { font-weight: 600; }
+.e-cm tr.v td { border-bottom: 2px solid rgba(32,30,29,.14); }
+.e-cm small { display: block; color: var(--color-neutral-600); font-size: 12px; line-height: 1.4; margin-top: 2px; }
+.e-cm .dot { color: var(--color-accent-700); }
+.e-cm-legend { font-size: 12.5px; color: var(--color-neutral-600); margin: 10px 0 0; }
+`;
+
+function matrixHtml(rows: (string | number)[][], names: string[], used: number): string {
+  const short: Record<string, string> = { JavaScript: "JS", "Python re": "Python", "Go RE2": "Go", "Rust regex": "Rust" };
+  const cell = (v: string) => {
+    const cls = v.startsWith("✓") ? "yes" : v.startsWith("✗") ? "no" : "partial";
+    return `<td class="c ${cls}">${esc(v.charAt(0))}</td>`;
+  };
+  const body = rows
+    .map((r, i) => {
+      const label = String(r[0]);
+      const dot = label.startsWith("● ");
+      const name = dot ? label.slice(2) : label;
+      const note = String(r[r.length - 1] ?? "");
+      return `<tr class="${i < 2 ? "v" : ""}"><td>${dot ? '<span class="dot">● </span>' : ""}${esc(name)}${note ? `<small>${esc(note)}</small>` : ""}</td>${r.slice(1, -1).map((c) => cell(String(c))).join("")}</tr>`;
+    })
+    .join("");
+  return `<div class="e-cm-wrap"><table class="e-cm"><thead><tr><th>Construct</th>${names.map((n) => `<th title="${esc(n)}">${esc(short[n] ?? n)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div><p class="e-cm-legend">✓ supported · ◐ partly or version-dependent · ✗ missing · ● used by this pattern${used ? "" : " (none — only portable syntax)"}</p>`;
+}
+
 const matchRows = (out: RxOut) =>
   out.matches.map((m, i) => [i + 1, m.i, m.e, m.t, m.g.map((g, k) => `${g?.name ?? k + 1}=${g ? JSON.stringify(g.t) : "∅"}`).join("  ") || null]);
 
@@ -155,7 +194,12 @@ const specs: SpecModule = {
       const found = detectConstructs(pattern, flavour);
       const rows = (bool(opts.all) ? CONSTRUCTS : found).map((c) => [(found.includes(c) ? "● " : "") + c.label, ...FLAVOURS.map(([f]) => (c.support[f] === "yes" ? "✓" : c.support[f] === "no" ? "✗" : "◐")), c.note]);
       const verdict = FLAVOURS.map(([f]) => (found.some((c) => c.support[f] === "no") ? "✗ no" : found.some((c) => c.support[f] === "partial") ? "◐ check" : "✓ yes"));
-      rows.unshift(["This pattern compiles?", ...verdict, found.length ? `${found.length} notable construct(s) detected` : "Only portable syntax — works everywhere"]);
+      const semantic = found.filter((c) => !c.syntax);
+      const verdict2 = FLAVOURS.map(([f]) => (semantic.some((c) => c.support[f] === "no") ? "✗ no" : semantic.some((c) => c.support[f] === "partial") ? "◐ check" : "✓ yes"));
+      rows.unshift(
+        ["Compiles as written?", ...verdict, found.length ? `${found.length} notable construct(s) detected (●)` : "Only portable syntax — works everywhere"],
+        ["Works after syntax translation?", ...verdict2, "Named-group spelling, inline flags, \\A/\\z, POSIX classes and \\x{…} can be rewritten; missing features cannot"]
+      );
 
       // Matches (run as JavaScript).
       let out: RxOut | null = null;
@@ -183,7 +227,7 @@ const specs: SpecModule = {
       const text = snip(target);
       const langOf: Record<string, "python" | "go" | "java" | "js" | "rust" | "text"> = { python: "python", go: "go", java: "java", js: "js", rust: "rust", csharp: "java", php: "text" };
 
-      views.push({ label: "Compatibility", out: { kind: "table", columns: ["Construct", ...FLAVOURS.map(([, n]) => n), "Notes"], rows } });
+      views.push({ label: "Compatibility", out: { kind: "html", html: matrixHtml(rows, FLAVOURS.map(([, n]) => n), found.length), css: MATRIX_CSS } });
       if (out) {
         views.push({
           label: `Matches (${out.matches.length})`,
@@ -364,7 +408,7 @@ const specs: SpecModule = {
       if (doc.tools.length) views.push({ label: `Tools (${doc.tools.length})`, out: { kind: "table", columns: ["name", "description", "arguments", "required", "lint"], rows: toolRows } });
       views.push({ label: `Issues (${allIssues.filter((i) => i.level !== "ok").length})`, out: { kind: "issues", items: allIssues.length ? allIssues : [{ level: "ok", message: "Every tool schema compiles and is well described." }] } });
       if (tool && text.startsWith("{")) views.push({ label: "tools/call request", out: { kind: "text", text, lang: "json" } });
-      if (doc.exchanges.length) views.push({ label: `Transcript (${doc.exchanges.length})`, out: { kind: "table", columns: ["#", "dir", "id", "method", "kind", "status", "ms", "summary"], rows: doc.exchanges.map((e) => [e.n, e.dir ?? null, e.id === null ? null : String(e.id), e.method, e.kind, e.status, e.ms, e.summary]) } });
+      if (doc.exchanges.length) views.push({ label: `Transcript (${doc.exchanges.length})`, out: { kind: "table", columns: ["dir", "id", "method", "status", "ms", "summary", "kind"], rows: doc.exchanges.map((e) => [e.dir ?? null, e.id === null ? null : String(e.id), e.method, e.status, e.ms, e.summary, e.kind]) } });
       if (doc.resources.length || doc.resourceTemplates.length)
         views.push({ label: `Resources (${doc.resources.length + doc.resourceTemplates.length})`, out: { kind: "table", columns: ["uri", "name", "mimeType", "description"], rows: [...doc.resources.map((r) => [String(r.uri ?? ""), r.name ? String(r.name) : null, r.mimeType ? String(r.mimeType) : null, r.description ? String(r.description) : null]), ...doc.resourceTemplates.map((r) => [String(r.uriTemplate ?? ""), r.name ? String(r.name) : null, r.mimeType ? String(r.mimeType) : null, `template · ${String(r.description ?? "")}`])] } });
       if (doc.prompts.length)

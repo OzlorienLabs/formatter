@@ -36,7 +36,7 @@ export default function GqlRemote({ endpoint, payload }: { endpoint: string; pay
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, padding: 14 }}>
+    <div style={{ display: "grid", gap: 12, padding: 14, gridTemplateColumns: "minmax(0, 1fr)" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         <button type="button" className="btn btn-primary" disabled={!valid || busy} onClick={send}>
           {busy ? "Sending…" : "Send to endpoint"}

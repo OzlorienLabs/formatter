@@ -10,7 +10,7 @@ export type Line =
   | { kind: "table"; columns: string[]; rows: (string | number | boolean | null)[][]; depth?: number };
 
 export const PG_CSS = `
-.e-pg { display: grid; gap: 12px; }
+.e-pg { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .e-pg-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 8px 10px; border-radius: var(--radius-lg); }
 .e-pg-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
 @media (max-width: 1100px) { .e-pg-grid { grid-template-columns: minmax(0, 1fr); } }

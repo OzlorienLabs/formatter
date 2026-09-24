@@ -390,6 +390,7 @@ const specs: SpecModule = {
   /* ── Lorem ipsum ─────────────────────────────────────────────────── */
   "lorem-generator": {
     generator: true,
+    layout: "stack",
     inputs: [],
     options: [
       { id: "unit", label: "Unit", type: "select", choices: [["paragraphs", "Paragraphs"], ["sentences", "Sentences"], ["words", "Words"], ["list", "List items"], ["headings", "Headings"]], default: "paragraphs" },
@@ -687,7 +688,24 @@ const specs: SpecModule = {
       }
       const docs = R.tokenDocs();
       views.push(
-        { label: "Tokens", out: { kind: "table", columns: ["token", "arguments", "what it makes"], rows: docs.map((d) => [d.token, d.args || null, d.desc]) } },
+        {
+          label: "Tokens",
+          out: {
+            kind: "table",
+            columns: ["token", "what it makes", "example", "arguments"],
+            rows: docs.map((d) => {
+              let ex = "";
+              if (!d.token.startsWith("[")) {
+                try {
+                  ex = JSON.stringify(R.generate(d.token, f, rnd).value);
+                } catch {
+                  ex = "";
+                }
+              }
+              return [d.token, d.desc, ex.length > 60 ? ex.slice(0, 57) + "…" : ex, d.args];
+            }),
+          },
+        },
         { label: "Stats", out: { kind: "stats", items: [{ label: "Tokens filled", value: stats.tokens }, { label: "Repeat blocks", value: stats.repeats }, { label: "Values", value: stats.nodes }, { label: "Size", value: fmtBytes(bytes(text)), tone: "info" }, { label: "Seed", value: str(opts.seed) || String(seed), tone: str(opts.seed) ? "ok" : "info" }] } }
       );
       return { text, views, filename: "random.json" };
@@ -849,7 +867,7 @@ const specs: SpecModule = {
         text,
         notes: notes.length ? notes : undefined,
         views: [
-          { label: "Next runs", out: { kind: "table", columns: ["#", `time (${tz})`, "UTC", "from now"], rows: times.map((t, i) => [i + 1, fmtTime(t), new Date(t).toISOString().replace(".000Z", "Z"), rel(t)]) } },
+          { label: "Next runs", out: { kind: "table", columns: [`time (${tz})`, "UTC", "from now"], rows: times.map((t) => [fmtTime(t), new Date(t).toISOString().replace(".000Z", "Z"), rel(t)]) } },
           { label: "Fields", out: { kind: "table", columns: ["field", "value", "meaning"], rows: fieldsRows } },
           { label: "Output", out: { kind: "text", text: primary, lang: fmtKey === "k8s" || fmtKey === "github" ? "yaml" : fmtKey === "systemd" ? "ini" : "text" } },
           { label: "All formats", out: { kind: "table", columns: ["target", "expression"], rows: [["Cron (5 field)", conv.unix], ["Quartz / Spring", conv.quartz], ["AWS EventBridge", conv.aws], ["systemd OnCalendar", sd.text], ["GitHub Actions", `cron: "${conv.unix}"`], ["Kubernetes", `schedule: "${conv.unix}"`]] } },
@@ -1001,7 +1019,7 @@ const specs: SpecModule = {
           { label: `Payload · ${parsed.type}`, out: { kind: "table", columns: ["field", "value"], rows: [...parsed.fields, ["Raw payload", payload]] } },
           { label: "Details", out: { kind: "stats", items: [{ label: "Version", value: qr.version }, { label: "Modules", value: `${qr.modules.size}×${qr.modules.size}` }, { label: "Error correction", value: ecc }, { label: "Mask pattern", value: qr.maskPattern ?? "—" }, { label: "Payload bytes", value: bytesLen }, { label: "Encoding", value: modes || "byte", tone: "info" }, { label: "Contrast", value: `${cr.toFixed(1)}:1`, tone: cr >= 4.5 ? "ok" : cr >= 3 ? "warn" : "bad" }, { label: "Round-trip", value: ok ? "✓ decodes" : "✗ failed", tone: ok ? "ok" : "bad" }] } },
           { label: "Checks", out: { kind: "issues", items: issues } },
-          { label: "SVG source", out: { kind: "text", text: svg, lang: "xml", wrap: true } },
+          { label: "Markup", out: { kind: "text", text: svg, lang: "xml", wrap: true } },
         ],
       };
     },
@@ -1180,7 +1198,9 @@ const specs: SpecModule = {
       if (!pipeline && !isNode) {
         try {
           const { renderMermaid } = await import("./lib/mermaid");
-          views.push({ label: "Graph", out: { kind: "svg", svg: await renderMermaid(mermaid), name: "workflow-graph" } });
+          // Mermaid caps the width at its natural size; small workflow graphs read better a little larger
+          const svg = (await renderMermaid(mermaid)).replace(/max-width:\s*([\d.]+)px/, (_m, w) => `max-width: ${Math.round(Math.min(1100, Number(w) * 1.5))}px`);
+          views.push({ label: "Graph", out: { kind: "svg", svg, name: "workflow-graph" } });
         } catch (e) {
           views.push({ label: "Graph", out: { kind: "status", ok: false, title: "Graph could not be drawn", detail: (e as Error).message } });
         }

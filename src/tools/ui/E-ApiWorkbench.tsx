@@ -41,12 +41,12 @@ export const METHOD_COLOR: Record<string, string> = {
 };
 
 const CSS = `
-.e-aw { display: grid; gap: 12px; }
+.e-aw { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .e-aw-bar { display: flex; gap: 8px; padding: 10px; border-radius: var(--radius-lg); flex-wrap: wrap; }
 .e-aw-bar .sel { font-family: var(--font-mono); font-weight: 600; min-width: 108px; }
 .e-aw-bar .url { flex: 1 1 320px; font-family: var(--font-mono); }
 .e-aw-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; align-items: start; }
-@media (max-width: 1100px) { .e-aw-grid { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 1100px) { .e-aw-grid { grid-template-columns: minmax(0,1fr); } .e-aw-left { display: contents !important; } .e-aw-hist { order: 3; } }
 .e-kv { display: grid; gap: 6px; padding: 10px 12px; }
 .e-kv-row { display: grid; grid-template-columns: 22px minmax(0,1fr) minmax(0,1.4fr) 28px; gap: 6px; align-items: center; }
 .e-kv-row .inp { font-family: var(--font-mono); font-size: 13px; width: 100%; }
@@ -188,7 +188,7 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
       </form>
 
       <div className="e-aw-grid">
-        <div style={{ display: "grid", gap: 12, alignContent: "start", minWidth: 0 }}>
+        <div className="e-aw-left" style={{ display: "grid", gap: 12, alignContent: "start", minWidth: 0, gridTemplateColumns: "minmax(0, 1fr)" }}>
           <section className="g pane" aria-label="Request">
             <div className="pane-head">
               <div className="tabs" role="tablist">
@@ -368,7 +368,7 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
               </div>
             )}
           </section>
-          <section className="g pane" aria-label="History">
+          <section className="g pane e-aw-hist" aria-label="History">
             <div className="pane-head">
               <span className="lbl">History</span>
               <span className="e-meta">{hist.length}/50 · this browser only</span>
@@ -495,7 +495,7 @@ export default function ApiWorkbench({ inputs, setInput, result, error, mono, re
             </>
           ) : (
             !err && (
-              <div style={{ padding: 16, display: "grid", gap: 10 }}>
+              <div style={{ padding: 16, display: "grid", gap: 10, gridTemplateColumns: "minmax(0, 1fr)" }}>
                 <p className="e-note" style={{ fontSize: 14 }}>
                   Press <b>Send</b>. URLs starting with <code className="mono">/mock-api/</code> are answered offline by the built-in mock API (manage routes in Fake JSON API). Any other URL is
                   fetched directly from your browser only when you press Send.

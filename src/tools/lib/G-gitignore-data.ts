@@ -8,7 +8,7 @@ export type Template = { id: string; name: string; group: string; aliases?: stri
 export const TEMPLATES: Template[] = [
   /* ── languages ─────────────────────────────────────────────── */
   {
-    id: "node", name: "Node", group: "Languages", aliases: ["npm", "yarn", "pnpm", "javascript", "js", "typescript", "ts"],
+    id: "node", name: "Node", group: "Languages", aliases: ["nodejs", "node.js", "npm", "yarn", "pnpm", "javascript", "js", "typescript", "ts"],
     body: `# Dependencies
 node_modules/
 jspm_packages/

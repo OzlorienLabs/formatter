@@ -148,6 +148,7 @@ export async function runGraphql(opts: { query: string; sdl: string; data: strin
   if (!schema || !doc) return out;
   const vErrs = g.validate(schema, doc);
   for (const e of vErrs) issues.push({ level: "error", message: e.message, ...loc(e), source: "query" });
+  issues.sort((a, b) => (a.source === b.source ? (a.line ?? 0) - (b.line ?? 0) : 0));
   if (vErrs.length || !opts.execute || issues.some((i) => i.source === "variables" && i.level === "error")) return out;
 
   // Pick the operation.

@@ -67,7 +67,8 @@ export function tokenDocs(): TokenDoc[] {
   const docs: TokenDoc[] = Object.entries(SPECIAL).map(([k, v]) => ({ token: v.sample, args: v.args, desc: v.desc }));
   for (const t of FIELD_TYPES) {
     if (SPECIAL[t.key] || t.key === "formula") continue;
-    docs.push({ token: `{{${t.key}${t.args?.length ? " " + t.args.join(" ") : ""}}}`, args: (t.args ?? []).join(" "), desc: `${t.label} (${t.group})` });
+    const sample: Record<string, string> = { min: t.key === "age" ? "18" : "1", max: t.key === "age" ? "65" : "100", decimals: "2", n: "3", prob: "50", from: "2024-01-01", to: "2024-12-31", values: "a,b,c", pattern: "AA-###", value: "x" };
+    docs.push({ token: `{{${t.key}${t.args?.length ? " " + t.args.map((a) => sample[a] ?? a).join(" ") : ""}}}`, args: (t.args ?? []).join(" "), desc: `${t.label} (${t.group})` });
   }
   docs.push({ token: '["{{repeat 5}}", {…}]', args: "n  |  min max", desc: "Array directive: n copies of the item (or a random count between min and max)" });
   return docs;

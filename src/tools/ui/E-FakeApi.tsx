@@ -9,7 +9,7 @@ import { mockMeta } from "../lib/E-mockui";
 import { METHOD_COLOR } from "./E-ApiWorkbench";
 
 const CSS = `
-.e-fa { display: grid; gap: 12px; }
+.e-fa { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .e-fa-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.3fr); gap: 12px; align-items: start; }
 @media (max-width: 1100px) { .e-fa-grid { grid-template-columns: minmax(0,1fr); } }
 .e-rt { display: grid; grid-template-columns: 22px 64px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; border-radius: var(--radius-md); cursor: pointer; font-size: 13px; }
@@ -23,7 +23,8 @@ const CSS = `
 .e-form { display: grid; grid-template-columns: 120px minmax(0,1fr) 90px 100px; gap: 8px 10px; padding: 12px; align-items: end; }
 .e-form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--color-neutral-700); }
 .e-form .wide { grid-column: 1 / -1; }
-@media (max-width: 640px) { .e-form { grid-template-columns: 1fr 1fr; } .e-form .path { grid-column: 1 / -1; } }
+.e-form .inp, .e-form .sel, .e-kv2 .inp { width: 100%; min-width: 0; }
+@media (max-width: 640px) { .e-form { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .e-form .path { grid-column: 1 / -1; } }
 .e-tokens { display: flex; flex-wrap: wrap; gap: 5px; }
 .e-tokens button { font-family: var(--font-mono); font-size: 11.5px; padding: 3px 8px; }
 .e-kv2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr) 28px; gap: 6px; }
@@ -31,7 +32,7 @@ const CSS = `
 .e-note2 { font-size: 13px; color: var(--color-neutral-600); line-height: 1.5; margin: 0; }
 .e-console { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 0; }
 @media (max-width: 900px) { .e-console { grid-template-columns: minmax(0,1fr); } }
-.e-dlg { display: grid; gap: 10px; padding: 12px; border-top: 1px solid rgba(32,30,29,.1); }
+.e-dlg { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; border-top: 1px solid rgba(32,30,29,.1); }
 .e-dlg textarea { width: 100%; min-height: 180px; font-family: var(--font-mono); font-size: 12.5px; }
 `;
 
@@ -262,7 +263,7 @@ export default function FakeApi({ inputs, opts, setInput, run, result, error, mo
                 </label>
                 {!cur.path.startsWith("/mock-api/") && <p className="e-note2 wide" style={{ color: "var(--color-accent-2-700)" }}>Paths must start with /mock-api/ to be served.</p>}
               </div>
-              <div style={{ padding: "0 12px 10px", display: "grid", gap: 6 }}>
+              <div style={{ padding: "0 12px 10px", display: "grid", gap: 6, gridTemplateColumns: "minmax(0, 1fr)" }}>
                 <span className="lbl">Response headers</span>
                 {hdrRows.map(([k, v], i) => (
                   <div key={i} className="e-kv2">
@@ -281,7 +282,7 @@ export default function FakeApi({ inputs, opts, setInput, run, result, error, mo
               <div className="g2" style={{ display: "flex", margin: "0 12px", minHeight: 220, maxHeight: 340, borderRadius: "var(--radius-md)", overflow: "hidden" }}>
                 <CodeEditor value={cur.body} onChange={(body) => patch({ body })} lang={/^\s*@collection/.test(cur.body) ? "text" : "json"} fontSize={mono} minHeight={220} label="Body template" />
               </div>
-              <div style={{ padding: "10px 12px 12px", display: "grid", gap: 6 }}>
+              <div style={{ padding: "10px 12px 12px", display: "grid", gap: 6, gridTemplateColumns: "minmax(0, 1fr)" }}>
                 <div className="e-tokens">
                   {TOKENS.map(([t, d]) => (
                     <button key={t} type="button" className="chip" title={d} onClick={() => patch({ body: t.startsWith("@") ? `${t}\n${cur.body}` : cur.body + t })}>
@@ -335,10 +336,10 @@ export default function FakeApi({ inputs, opts, setInput, run, result, error, mo
         </div>
       </section>
 
-      <section className="g2" style={{ borderRadius: "var(--radius-lg)", padding: "12px 14px", display: "grid", gap: 8 }}>
+      <section className="g2" style={{ borderRadius: "var(--radius-lg)", padding: "12px 14px", display: "grid", gap: 8, gridTemplateColumns: "minmax(0, 1fr)" }}>
         <span className="lbl">Use it from code</span>
         <p className="e-note2">Every page of this app answers <code className="mono">/mock-api/…</code> from these routes through a service worker, so fetch calls made from this app (API Workbench, GraphQL remote mode, your own snippets) are answered offline:</p>
-        <div className="g" style={{ borderRadius: "var(--radius-md)" }}>
+        <div className="g scroll" style={{ borderRadius: "var(--radius-md)", overflowX: "auto" }}>
           <CodeView
             text={`const res = await fetch("/mock-api/users", {\n  method: "POST",\n  headers: { "Content-Type": "application/json" },\n  body: JSON.stringify({ name: "Ada", role: "admin" }),\n});\nconsole.log(res.status, await res.json()); // 201 { id: 6, name: "Ada", … }\n\nconst list = await (await fetch("/mock-api/users?role=admin")).json();`}
             lang="js"

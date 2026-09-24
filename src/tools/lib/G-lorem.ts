@@ -106,8 +106,6 @@ function sentence(r: Rng, vocab: string[], len: number[]): string {
   return cap(ws.join(" ")) + end;
 }
 
-export type LoremResult = { items: string[]; kind: "paragraph" | "sentence" | "word" | "item" | "heading" };
-
 export function generateLorem(o: LoremOpts): { text: string; items: string[]; seed: number } {
   const seed = seedFrom(o.seed);
   const r = mulberry32(seed);
@@ -156,7 +154,7 @@ function render(items: string[], o: LoremOpts): string {
   const u = o.unit;
   switch (o.format) {
     case "json":
-      return JSON.stringify(u === "words" ? items : items, null, 2);
+      return JSON.stringify(items, null, 2);
     case "html":
       if (u === "paragraphs") return items.map((p) => `<p>${esc(p)}</p>`).join("\n");
       if (u === "list") return `<ul>\n${items.map((p) => `  <li>${esc(p)}</li>`).join("\n")}\n</ul>`;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CustomProps } from "../types";
 import { regexMeta, explainRegex, REGEX_LIBRARY, FLAG_INFO, type RxOut, type RxMatch, type TokKind } from "../lib/E-regex";
 
@@ -8,7 +8,7 @@ const FLAGS = ["g", "i", "m", "s", "u", "y", "d"];
 type Tab = "match" | "replace" | "split" | "explain" | "library";
 
 const CSS = `
-.e-rx { display: grid; gap: 12px; }
+.e-rx { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .e-rx-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-lg); }
 .e-rx-pat { display: flex; align-items: center; flex: 1 1 420px; min-width: 0; border: 1px solid rgba(32,30,29,.16); border-radius: var(--radius-md); background: rgba(255,255,255,.7); padding: 0 10px; }
 .e-rx-pat:focus-within { outline: 2px solid var(--color-accent-300); border-color: var(--color-accent-500); }
@@ -41,7 +41,7 @@ const CSS = `
 .e-card:hover, .e-card.act { border-color: var(--color-accent-400); background: rgba(0,136,176,.05); }
 .e-card .hd { display: flex; gap: 10px; align-items: baseline; font-family: var(--font-mono); font-size: 13px; }
 .e-card .no { color: var(--color-neutral-500); min-width: 2.5ch; }
-.e-card .rng { color: var(--color-neutral-500); font-size: 11.5px; }
+.e-card .rng { color: var(--color-neutral-500); font-size: 11.5px; white-space: nowrap; }
 .e-card .txt { color: var(--color-neutral-900); word-break: break-all; white-space: pre-wrap; }
 .e-grp { display: grid; grid-template-columns: auto auto auto minmax(0,1fr); gap: 2px 10px; margin-top: 5px; padding-left: 3.2ch; font-family: var(--font-mono); font-size: 12px; align-items: center; }
 .e-grp .nm { color: var(--color-accent-800); }
@@ -110,21 +110,21 @@ function renderMarks(text: string, matches: RxMatch[], active: number | null) {
 
 function HighlightEditor({ value, onChange, matches, active, setActive, fontSize, taRef }: { value: string; onChange: (v: string) => void; matches: RxMatch[]; active: number | null; setActive: (i: number | null) => void; fontSize: number; taRef: React.RefObject<HTMLTextAreaElement> }) {
   const pre = useRef<HTMLPreElement>(null);
-  const sync = () => {
+  const sync = useCallback(() => {
     const t = taRef.current;
     if (t && pre.current) {
       pre.current.style.transform = `translateY(${-t.scrollTop}px)`;
       pre.current.style.width = `${t.clientWidth}px`;
     }
-  };
+  }, [taRef]);
   useEffect(() => {
     const t = taRef.current;
     if (!t) return;
     const ro = new ResizeObserver(sync);
     ro.observe(t);
     return () => ro.disconnect();
-  });
-  useEffect(sync, [value]);
+  }, [taRef, sync]);
+  useEffect(sync, [value, sync]);
   const marks = useMemo(() => renderMarks(value, matches, active), [value, matches, active]);
   const onCaret = () => {
     const t = taRef.current;
@@ -167,12 +167,12 @@ export default function RegexTester({ inputs, opts, setInput, setOpt, result, er
   const [tab, setTab] = useState<Tab>(mode);
   const [active, setActive] = useState<number | null>(null);
   const [q, setQ] = useState("");
-  const [data, setData] = useState<RxOut | null>(null);
+  const [meta, setMeta] = useState<{ out: RxOut; req: { text: string; pattern: string } } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const meta = result ? regexMeta.get(result) : undefined;
-    if (meta) setData(meta.out);
+    const m = result ? regexMeta.get(result) : undefined;
+    if (m) setMeta(m);
   }, [result]);
   useEffect(() => {
     if (tab === "match" || tab === "replace" || tab === "split") setTab(mode);
@@ -182,7 +182,9 @@ export default function RegexTester({ inputs, opts, setInput, setOpt, result, er
   useEffect(() => setActive(null), [pattern, flags]);
 
   const tokens = useMemo(() => explainRegex(pattern, flags), [pattern, flags]);
-  const stale = !!error;
+  // Indices are only meaningful for the text they were computed on.
+  const data = meta && meta.req.text === text ? meta.out : null;
+  const stale = !!error && !!data;
   const matches = !pattern ? [] : data?.matches ?? [];
   const lib = useMemo(() => REGEX_LIBRARY.filter((e) => !q || (e.name + " " + e.desc).toLowerCase().includes(q.toLowerCase())), [q]);
 
@@ -390,7 +392,7 @@ function TokRow({ kind, depth, text, desc }: { kind: TokKind; depth: number; tex
   return (
     <div className={`e-k-${kind}`} style={{ display: "contents" }}>
       <div style={{ paddingLeft: depth * 16 }}>
-        <code>{text}</code>
+        <code>{text.replace(/ /g, "␣")}</code>
       </div>
       <div className="d">{desc}</div>
     </div>

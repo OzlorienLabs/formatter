@@ -217,7 +217,7 @@ export function inspect(raw: string): Inspection {
     else t = (BigInt("0x" + hex.slice(0, 8)) << 28n) | (BigInt("0x" + hex.slice(8, 12)) << 12n) | BigInt("0x" + hex.slice(13, 16));
     const ms = Number((t - GREG_OFFSET) / 10000n);
     const sub = Number((t - GREG_OFFSET) % 10000n);
-    r.time = new Date(ms).toISOString().replace("Z", `${String(sub).padStart(4, "0")}Z`).replace(/\.(\d{3})(\d{4})Z$/, ".$1$2Z");
+    r.time = new Date(ms).toISOString().replace("Z", `${String(sub).padStart(4, "0")}Z`); // 100-ns precision
     r.clockSeq = ((b[8] & 0x3f) << 8) | b[9];
     r.node = Array.from(b.slice(10), (x) => HEX[x]).join(":");
     notes.push(b[10] & 1 ? "Node has the multicast bit set — a random node ID, not a MAC address." : "Node looks like a real MAC address (it can identify the machine that made it).");

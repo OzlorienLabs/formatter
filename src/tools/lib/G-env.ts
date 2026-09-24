@@ -131,7 +131,7 @@ export function expand(entries: EnvEntry[], issues?: Issue[]): Map<string, strin
 
 export function validateExtras(entries: EnvEntry[], issues: Issue[]) {
   for (const e of entries) {
-    if (e.value === "") issues.push({ level: "info", message: `${e.key} is empty.`, line: e.line });
+    if (e.value === "") issues.push(/SECRET|PASSWORD|TOKEN|KEY/i.test(e.key) ? { level: "warning", message: `${e.key} is empty — the app may start without a secret (or fall back to an insecure default).`, line: e.line } : { level: "info", message: `${e.key} is empty.`, line: e.line });
     if (/(SECRET|PASSWORD|PASSWD|TOKEN|PRIVATE_KEY|API_KEY)/i.test(e.key) && e.value && /^(changeme|password|secret|admin|123456|test|xxx+|todo)$/i.test(e.value))
       issues.push({ level: "warning", message: `${e.key} looks like a placeholder secret ("${e.value}").`, line: e.line });
     if (/^(true|false|yes|no)$/i.test(e.value) && e.value !== e.value.toLowerCase()) issues.push({ level: "info", message: `${e.key}: booleans are usually lowercase — string comparisons are case-sensitive.`, line: e.line });

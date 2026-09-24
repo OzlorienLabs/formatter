@@ -335,7 +335,6 @@ async function runInProcess(code: string, showValue: boolean): Promise<JsRunResu
     },
     addEventListener: (t: string, h: (e: unknown) => void) => (handlers[t] ??= []).push(h),
   };
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
   new Function("self", "performance", JS_WORKER_SRC)(fakeSelf, performance);
   await (fakeSelf.onmessage as (e: { data: unknown }) => Promise<void>)({ data: { id: 1, code, showValue } });
   await new Promise((r) => setTimeout(r, 30));

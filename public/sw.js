@@ -93,7 +93,7 @@ async function mockResponse(request) {
     if (answer && answer.type === "mock-response") {
       if (!answer.response) return json(404, { error: `No mock route matches ${request.method} ${new URL(request.url).pathname}` });
       const r = answer.response;
-      if (r.delay) await new Promise((res) => setTimeout(res, Math.min(r.delay, 30000)));
+      // resolveMock has already waited out the route's delay in the page.
       return new Response(request.method === "HEAD" ? null : r.body, { status: r.status, headers: r.headers });
     }
   }

@@ -391,7 +391,9 @@ function toMermaid(triggers: Trigger[], jobs: JobInfo[]): string {
   L.push(`  trigger(["${lab(triggers.map((t) => t.event).join(" · ") || "trigger")}"])`);
   for (const j of jobs) {
     const extra = [j.matrix ? `×${j.matrix} matrix` : "", j.environment ? `env: ${j.environment}` : "", j.uses ? "reusable" : ""].filter(Boolean).join(" · ");
-    L.push(`  ${idOf(j.id)}["<b>${lab(j.name)}</b><br/><small>${lab(j.runsOn)}${extra ? " · " + lab(extra) : ""}</small>"]`);
+    const title = j.name.includes("${{") ? j.id : j.name; // expression names are unreadable in a graph
+    const runs = j.runsOn.includes("${{") ? (j.matrix ? "matrix runners" : "dynamic runner") : j.runsOn;
+    L.push(`  ${idOf(j.id)}["<b>${lab(title)}</b><br/>${lab(runs)}${extra ? " · " + lab(extra) : ""}"]`);
   }
   for (const j of jobs) {
     if (!j.needs.length) L.push(`  trigger --> ${idOf(j.id)}`);

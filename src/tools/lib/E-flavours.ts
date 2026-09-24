@@ -22,6 +22,8 @@ type Construct = {
   test: RegExp;
   support: Record<Flavour, Support>;
   note: string;
+  /** Only the spelling differs between flavours — translating the syntax fixes it. */
+  syntax?: boolean;
 };
 
 const all = (s: Support): Record<Flavour, Support> => ({ js: s, python: s, go: s, java: s, pcre: s, dotnet: s, rust: s });
@@ -34,8 +36,8 @@ export const CONSTRUCTS: Construct[] = [
   { id: "varlookbehind", label: "Variable-length lookbehind", test: /\(\?<[=!][^)]*(?:[*+]|\{\d+,\d*\})/, support: S({ python: "no", pcre: "partial", java: "partial", go: "no", rust: "no" }), note: "Python needs fixed width; Java needs a bounded maximum; PCRE2 ≥10.43 allows limited variable length. JS and .NET allow any." },
   { id: "backref", label: "Numbered backreference \\1", test: /\\[1-9]/, support: S({ go: "no", rust: "no" }), note: "Backreferences make matching NP-hard, so RE2 and Rust omit them." },
   { id: "namedbackref", label: "Named backreference \\k<n> / (?P=n)", test: /\\k[<'{]|\(\?P=/, support: S({ go: "no", rust: "no" }), note: "Python spells it (?P=name); the others \\k<name>." },
-  { id: "named", label: "Named group (?<n>…)", test: /\(\?<[A-Za-z_]/, support: S({ python: "partial" }), note: "Python re only accepts (?P<name>…); Go ≥1.22 and Rust ≥1.9 accept both." },
-  { id: "namedP", label: "Named group (?P<n>…)", test: /\(\?P</, support: S({ js: "no", java: "no", dotnet: "no" }), note: "Python/Go/Rust/PCRE syntax; JavaScript, Java and .NET need (?<name>…)." },
+  { syntax: true, id: "named", label: "Named group (?<n>…)", test: /\(\?<[A-Za-z_]/, support: S({ python: "partial" }), note: "Python re only accepts (?P<name>…); Go ≥1.22 and Rust ≥1.9 accept both." },
+  { syntax: true, id: "namedP", label: "Named group (?P<n>…)", test: /\(\?P</, support: S({ js: "no", java: "no", dotnet: "no" }), note: "Python/Go/Rust/PCRE syntax; JavaScript, Java and .NET need (?<name>…)." },
   { id: "possessive", label: "Possessive quantifier *+ ++ ?+", test: /(?:[*+?]|\})\+/, support: S({ js: "no", go: "no", rust: "no", dotnet: "no" }), note: "Python supports them from 3.11." },
   { id: "atomic", label: "Atomic group (?>…)", test: /\(\?>/, support: S({ js: "no", go: "no", rust: "no" }), note: "Python supports them from 3.11." },
   { id: "lazy", label: "Lazy quantifier *? +? ??", test: /(?:[*+?]|\})\?/, support: all("yes"), note: "Universal." },
@@ -43,11 +45,11 @@ export const CONSTRUCTS: Construct[] = [
   { id: "recursion", label: "Recursion (?R) (?1) (?&n)", test: /\(\?(?:R|[+-]?\d+|&\w+|P>\w+)\)/, support: S({ pcre: "yes" }, "no"), note: "PCRE only (.NET has balancing groups instead)." },
   { id: "conditional", label: "Conditional (?(1)yes|no)", test: /\(\?\(/, support: S({ js: "no", go: "no", rust: "no", java: "no" }), note: "PCRE, .NET and Python support conditionals on a group." },
   { id: "keep", label: "Match reset \\K", test: /\\K/, support: S({ pcre: "yes" }, "no"), note: "PCRE only; rewritten as a lookbehind for JavaScript when possible." },
-  { id: "inlineflags", label: "Inline flags (?i) (?m) (?s) (?x)", test: /\(\?[imsxU-]+\)/, support: S({ js: "no" }), note: "JavaScript uses /…/flags (ES2025 adds scoped (?i:…) only)." },
+  { syntax: true, id: "inlineflags", label: "Inline flags (?i) (?m) (?s) (?x)", test: /\(\?[imsxU-]+\)/, support: S({ js: "no" }), note: "JavaScript uses /…/flags (ES2025 adds scoped (?i:…) only)." },
   { id: "scopedflags", label: "Scoped flags (?i:…)", test: /\(\?[imsx-]+:/, support: S({ js: "partial" }), note: "JavaScript since ES2025 (Chrome 125, Firefox 132, Safari 18.x)." },
-  { id: "anchorsAZ", label: "\\A \\Z \\z anchors", test: /\\[AZz]/, support: S({ js: "no", go: "partial", rust: "partial", python: "partial" }), note: "Go and Rust have \\A and \\z; Python has \\A and \\Z (= \\z; \\z too from 3.14); JS uses ^/$ without the m flag." },
-  { id: "posix", label: "POSIX class [[:alpha:]]", test: /\[:[a-z]+:\]/, support: S({ js: "no", python: "no", java: "no", dotnet: "no" }), note: "PCRE, Go and Rust only." },
-  { id: "hexbrace", label: "\\x{…} code point", test: /\\x\{/, support: S({ js: "no", python: "no", dotnet: "no" }), note: "JavaScript uses \\u{…} with the u flag; Python \\U0001F600." },
+  { syntax: true, id: "anchorsAZ", label: "\\A \\Z \\z anchors", test: /\\[AZz]/, support: S({ js: "no", go: "partial", rust: "partial", python: "partial" }), note: "Go and Rust have \\A and \\z; Python has \\A and \\Z (= \\z; \\z too from 3.14); JS uses ^/$ without the m flag." },
+  { syntax: true, id: "posix", label: "POSIX class [[:alpha:]]", test: /\[:[a-z]+:\]/, support: S({ js: "no", python: "no", java: "no", dotnet: "no" }), note: "PCRE, Go and Rust only." },
+  { syntax: true, id: "hexbrace", label: "\\x{…} code point", test: /\\x\{/, support: S({ js: "no", python: "no", dotnet: "no" }), note: "JavaScript uses \\u{…} with the u flag; Python \\U0001F600." },
   { id: "classops", label: "Class set operations && --", test: /\[[^\]]*(?:&&|--)/, support: S({ python: "no", go: "no", pcre: "no", dotnet: "partial", js: "partial" }, "yes"), note: "Java and Rust support &&; JS needs the v flag; .NET has subtraction [a-z-[aeiou]] only." },
   { id: "horizontal", label: "\\h \\R \\X", test: /\\[hRX]/, support: S({ js: "no", python: "no", go: "no", rust: "no", dotnet: "no" }), note: "PCRE and Java." },
 ];

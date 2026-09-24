@@ -20,6 +20,7 @@ export default function GOut({
   label = "Output",
   extra,
   style,
+  className,
 }: {
   result: Result | null;
   error?: string;
@@ -31,6 +32,7 @@ export default function GOut({
   label?: string;
   extra?: React.ReactNode;
   style?: React.CSSProperties;
+  className?: string;
 }) {
   const views: View[] = useMemo(() => {
     if (!result) return [];
@@ -46,10 +48,10 @@ export default function GOut({
   const text = result?.text ?? "";
 
   return (
-    <section className="g pane" aria-label={label} style={{ minHeight, maxHeight, ...style }}>
+    <section className={`g pane${className ? " " + className : ""}`} aria-label={label} style={{ minHeight, maxHeight, ...style }}>
       <div className="pane-head">
         {views.length > 1 ? (
-          <div className="tabs" role="tablist" style={{ minWidth: 0, flex: "1 1 auto" }}>
+          <div className="tabs" role="tablist" style={{ minWidth: 0, flex: "1 1 0" }}>
             {views.map((v, i) => (
               <button key={v.label + i} type="button" role="tab" aria-selected={active === v} onClick={() => setTab(i)}>
                 {v.label}
@@ -107,7 +109,7 @@ export default function GOut({
 /** A labelled form row: <label><span class=lbl>…</span>{control}</label>. */
 export function Field({ label, children, hint, wide }: { label: string; children: React.ReactNode; hint?: string; wide?: boolean }) {
   return (
-    <label title={hint} style={wide ? { gridColumn: "1 / -1" } : undefined}>
+    <label title={hint} style={{ display: "grid", gap: 4, fontSize: 13, color: "var(--color-neutral-700)", minWidth: 0, ...(wide ? { gridColumn: "1 / -1" } : {}) }}>
       <span className="lbl" style={{ fontSize: 11 }}>{label}</span>
       {children}
     </label>
@@ -193,7 +195,8 @@ export const G_CSS = `
 .g-choice button { text-align: left; padding: 7px 10px; border: 1px solid rgba(32,30,29,.14); border-radius: var(--radius-md); background: rgba(255,255,255,.4); cursor: pointer; font-size: 13.5px; color: var(--color-neutral-800); }
 .g-choice button:hover { border-color: var(--color-accent-400); }
 .g-choice button[aria-pressed="true"] { background: var(--color-accent-100); border-color: var(--color-accent-500); color: var(--color-accent-900); }
-@media (max-width: 1100px) { .g-split { grid-template-columns: minmax(0, 1fr); } .g-sticky { position: static; max-height: none; } }
+.g-split.g-wide-left { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .g-split, .g-split.g-wide-left { grid-template-columns: minmax(0, 1fr); } .g-sticky { position: static; max-height: none; } .g-split > section.pane:not(.g-sticky) { min-height: 0 !important; } .g-split > .g-sticky { min-height: 380px !important; max-height: 80vh; } }
 @media (max-width: 520px) { .g-form { padding: 12px; } .g-choice { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } }
 `;
 
