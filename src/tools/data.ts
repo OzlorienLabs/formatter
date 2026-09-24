@@ -123,7 +123,7 @@ function b64ToBytes(b64: string): Uint8Array {
 
 const EXPLORER_CSS = `
 .dx{display:grid;gap:14px;font-family:var(--font-mono);font-size:12.5px}
-.dx-col{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:12px;align-items:center;padding:10px 12px;border:1px solid rgba(32,30,29,.08);border-radius:10px;background:rgba(255,255,255,.5)}
+.dx-col{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,620px);gap:12px;align-items:center;padding:10px 12px;border:1px solid rgba(32,30,29,.08);border-radius:10px;background:rgba(255,255,255,.5)}
 .dx-col h4{margin:0;font-size:13.5px;font-family:var(--font-mono);font-weight:600;word-break:break-all}
 .dx-col small{display:block;color:#78716c;font-size:11.5px;margin-top:2px}
 .dx-axis{display:flex;justify-content:space-between;color:#78716c;font-size:11px;width:260px;max-width:100%}
@@ -232,7 +232,7 @@ const specs: SpecModule = {
       const e = T.escapeHtml;
       const dist = profiles
         .map((p) => {
-          const nullBar = `<div class="dx-null" title="${p.nullPct.toFixed(1)}% missing"><i style="width:${p.nullPct.toFixed(1)}%"></i></div>`;
+          const nullBar = p.nulls ? `<div class="dx-null" title="${p.nullPct.toFixed(1)}% missing"><i style="width:${p.nullPct.toFixed(1)}%"></i></div><small style="color:#d6006c">${p.nulls} missing</small>` : "";
           const head = `<div><h4>${e(p.name)}</h4><small>${p.type} · ${p.distinct} distinct · ${p.nullPct.toFixed(1)}% null</small></div>`;
           if (p.hist && p.histRange) {
             return `<div class="dx-col">${head}<div>${T.sparkBars(p.hist, 260, 44)}<div class="dx-axis"><span>${f(p.histRange[0])}</span><span>μ ${f(p.mean)} · σ ${f(p.stddev)}</span><span>${f(p.histRange[1])}</span></div>${nullBar}</div></div>`;

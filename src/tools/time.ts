@@ -77,10 +77,17 @@ function convertDurations(src: string, fmt: string): Result {
   if (!good.length) throw new ToolError(bad.map((r) => `Line ${r.line}: ${r.err}`).join("\n"));
   const total = good.reduce((a, r) => a + r.sec!, 0);
   let text: string;
-  if (fmt === "all") {
-    const parts = good.map((r) => block(`${r.label ? r.label + ": " : ""}${r.input}   (${r.kind}${r.approx ? ", months/years averaged" : ""})`, r.sec!));
-    if (good.length > 1) parts.push(block(`Total of ${good.length}`, total));
-    text = parts.join("\n\n");
+  if (fmt === "all" && good.length === 1 && !bad.length) {
+    const r = good[0];
+    text = block(`${r.label ? r.label + ": " : ""}${r.input}   (${r.kind}${r.approx ? ", months/years averaged" : ""})`, r.sec!);
+  } else if (fmt === "all") {
+    // Several lines: one aligned row each, then the total.
+    const head = ["input", "seconds", "ISO 8601", "clock", "compact"];
+    const body = rows.map((r) => (r.sec !== undefined ? [(r.label ? r.label + ": " : "") + r.input, String(allForms(r.sec).seconds), toIso(r.sec), toClock(r.sec), toCompact(r.sec)] : [r.input, "error: " + r.err, "", "", ""]));
+    const tot = ["TOTAL", String(allForms(total).seconds), toIso(total), toClock(total), toCompact(total)];
+    const w = head.map((h, i) => Math.max(h.length, ...[...body, tot].map((b) => (b[i] ?? "").length)));
+    const fmtRow = (b: string[]) => b.map((c, i) => (i === 1 ? c.padStart(w[i]) : c.padEnd(w[i]))).join("  ").trimEnd();
+    text = [fmtRow(head), w.map((x) => "─".repeat(x)).join("  "), ...body.map(fmtRow), w.map((x) => "─".repeat(x)).join("  "), fmtRow(tot), "", `Total: ${toHuman(total)}`].join("\n");
   } else {
     text = rows.map((r) => (r.sec !== undefined ? (r.label ? `${r.label}: ` : "") + formatOne(r.sec, fmt) : `error: ${r.err}`)).join("\n");
   }

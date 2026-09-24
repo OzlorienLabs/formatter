@@ -176,10 +176,11 @@ function health(c: DockerCfg, port: string): { line: string | null; install: str
       if (c.flavour === "distroless") return { line: null, install: null };
       break;
   }
-  if (c.flavour === "alpine" || c.stack === "static" || (c.stack === "php" && c.flavour === "alpine")) return { line: `HEALTHCHECK ${opts} \\\n  CMD wget -qO- ${url} >/dev/null || exit 1`, install: c.stack === "dotnet" ? null : null };
-  // Debian slim images have neither curl nor wget
-  const needCurl = c.flavour === "slim" || c.stack === "dotnet" || c.stack === "java" || c.stack === "go" || c.stack === "rust";
-  return { line: `HEALTHCHECK ${opts} \\\n  CMD curl -fsS ${url} >/dev/null || exit 1`, install: needCurl ? "RUN apt-get update && apt-get install -y --no-install-recommends curl \\\n && rm -rf /var/lib/apt/lists/*" : null };
+  const debian = c.flavour === "slim" || c.flavour === "full" || (c.stack === "dotnet" && c.flavour !== "alpine");
+  if (!debian) return { line: `HEALTHCHECK ${opts} \\\n  CMD wget -qO- ${url} >/dev/null || exit 1`, install: null }; // busybox wget
+  // Debian slim, Temurin and ASP.NET images ship without curl
+  const needCurl = c.flavour === "slim" || c.stack === "dotnet" || c.stack === "java" || ((c.stack === "go" || c.stack === "rust") && c.flavour !== "full");
+  return { line: `HEALTHCHECK ${opts} \\\n  CMD curl -fsS ${url} >/dev/null || exit 1`, install: needCurl && !["static", "php", "ruby"].includes(c.stack) ? "RUN apt-get update && apt-get install -y --no-install-recommends curl \\\n && rm -rf /var/lib/apt/lists/*" : null };
 }
 
 /* ── Dockerfile per stack ───────────────────────────────────────────── */

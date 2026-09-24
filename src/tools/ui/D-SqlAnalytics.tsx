@@ -10,7 +10,7 @@ import type { LoadedTable } from "@/src/tools/lib/D-sqlite";
 
 const CSS = `
 .sqa { display: grid; gap: 14px; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); align-items: start; }
-@media (max-width: 900px) { .sqa { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .sqa { grid-template-columns: minmax(0, 1fr); } .sqa .side { order: 2; } }
 .sqa .side { display: grid; gap: 0; }
 .sqa .main { display: grid; gap: 14px; min-width: 0; }
 .sqa .tbl { border-bottom: 1px solid rgba(32,30,29,.07); }
@@ -26,8 +26,8 @@ const CSS = `
 .sqa .add { padding: 10px; display: grid; gap: 8px; border-top: 1px solid rgba(32,30,29,.08); }
 .sqa .add textarea { width: 100%; min-height: 110px; resize: vertical; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; padding: 8px 10px; }
 .sqa .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.sqa .hist button { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; text-align: left; border: 0; background: none; cursor: pointer; padding: 7px 12px; border-bottom: 1px solid rgba(32,30,29,.06); }
-.sqa .hist button:hover { background: rgba(0,136,176,.05); }
+.sqa .hist .hrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; text-align: left; border: 0; background: none; cursor: pointer; padding: 7px 12px; border-bottom: 1px solid rgba(32,30,29,.06); }
+.sqa .hist .hrow:hover { background: rgba(0,136,176,.05); }
 .sqa .hist code { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-neutral-900); }
 .sqa .hist small { color: var(--color-neutral-600); font-size: 11.5px; white-space: nowrap; }
 .sqa .muted { color: var(--color-neutral-600); font-size: 13px; line-height: 1.5; padding: 10px 12px; }
@@ -356,7 +356,7 @@ export default function SqlAnalytics({ inputs, setInput, run, result, error, mon
             </div>
             <div className="scroll" style={{ maxHeight: 220, overflow: "auto" }}>
               {hist.map((h, i) => (
-                <button key={i} type="button" onClick={() => setInput("sql", h.sql)} title="Load this query into the editor">
+                <button key={i} type="button" className="hrow" onClick={() => setInput("sql", h.sql)} title="Load this query into the editor">
                   <code>{h.sql.replace(/\s+/g, " ").trim() || "(empty)"}</code>
                   <small style={{ color: h.ok ? undefined : "var(--color-accent-2-700)" }}>{h.ok ? `${h.rows ?? 0} rows${h.ms ? ` · ${Math.round(h.ms)} ms` : ""}` : "error"} · {h.at}</small>
                 </button>

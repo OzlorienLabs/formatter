@@ -7,7 +7,8 @@ type GraphvizApi = { layout: (src: string, format: string, engine: string) => st
 let gvP: Promise<GraphvizApi> | null = null;
 function graphviz(): Promise<GraphvizApi> {
   if (!gvP) {
-    gvP = import("@hpcc-js/wasm/graphviz").then((m) => m.Graphviz.load() as unknown as Promise<GraphvizApi>);
+    // The package's bundled types point at an uninstalled sub-package, so describe the bit we use.
+    gvP = import("@hpcc-js/wasm/graphviz").then((m) => (m as unknown as { Graphviz: { load: () => Promise<GraphvizApi> } }).Graphviz.load());
     gvP.catch(() => (gvP = null));
   }
   return gvP;
@@ -45,6 +46,26 @@ function gvError(e: unknown, src: string, shift: number): ToolError {
     return new ToolError(`Graphviz syntax error on line ${line}${m[2] ? ` near "${m[2]}"` : ""}:\n  ${line} | ${text}\nCheck for a missing semicolon, bracket or quote on this or the previous line.`);
   }
   return new ToolError(`Graphviz: ${msg || "layout failed"}`);
+}
+
+/**
+ * Give an SVG a pixel size plus max-width:100% so the preview shrinks to the pane but never
+ * grows past its natural size. Handles Graphviz (pt units) and Mermaid (width="100%" + max-width).
+ */
+export function fitSvg(svg: string): string {
+  return svg.replace(/<svg\b[^>]*>/, (tag) => {
+    const vb = tag.match(/viewBox="[\d.\-]+[ ,]+[\d.\-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"/);
+    let w = Number(tag.match(/\swidth="([\d.]+)(pt|px)?"/)?.[1] ?? NaN);
+    if (/\swidth="[\d.]+pt"/.test(tag)) w = (w * 4) / 3;
+    const mw = tag.match(/max-width:\s*([\d.]+)px/);
+    if (mw) w = Number(mw[1]);
+    if (!Number.isFinite(w) && vb) w = Number(vb[1]);
+    if (!Number.isFinite(w) || !vb) return tag;
+    const h = (w * Number(vb[2])) / Number(vb[1]);
+    let t = tag.replace(/\s(width|height)="[^"]*"/g, "").replace(/\sstyle="[^"]*"/, "");
+    t = t.replace(/^<svg/, `<svg width="${Math.round(w)}" height="${Math.round(h)}" style="max-width:100%;height:auto"`);
+    return t;
+  });
 }
 
 /* ── Graphviz examples ───────────────────────────────────────────────── */
@@ -677,7 +698,7 @@ async function mermaidRender(code: string, theme: string, look: string, name: st
   }
   const svg = await M.renderMermaid(code, { theme: theme as "default", look: look as "classic" });
   void name;
-  return { svg, notes: [] };
+  return { svg: fitSvg(svg), notes: [] };
 }
 
 function mermaidError(e: unknown, code: string): ToolError {
@@ -749,7 +770,9 @@ const specs: SpecModule = {
       } catch {
         /* stats are optional */
       }
-      const views: View[] = [{ label: "Diagram", out: { kind: "svg", svg, name: "graph" } }];
+      // The preview scales down to the pane (like Mermaid output); downloads keep Graphviz's own size.
+      const fitted = fitSvg(svg);
+      const views: View[] = [{ label: "Diagram", out: { kind: "svg", svg: fitted, name: "graph" } }];
       if (fmt !== "svg") views.push({ label: fmt === "json" ? "JSON" : fmt === "plain" ? "Plain" : "DOT", out: { kind: "text", text, lang } });
       views.push({ label: "SVG source", out: { kind: "text", text: svg, lang: "xml" } });
       if (theme !== "none" || rankdir !== "auto") views.push({ label: "Effective DOT", out: { kind: "text", text: code, lang: "dot" } });
