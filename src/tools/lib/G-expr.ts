@@ -13,7 +13,7 @@ function lex(src: string): Tok[] {
   while (i < src.length) {
     const c = src[i];
     if (/\s/.test(c)) { i++; continue; }
-    if (/[0-9.]/.test(c) && /[0-9]/.test(src[i + 1] ?? c)) {
+    if (/[0-9]/.test(c) || (c === "." && /[0-9]/.test(src[i + 1] ?? ""))) {
       const m = /^\d*\.?\d+(e[+-]?\d+)?/i.exec(src.slice(i))!;
       out.push({ t: "num", v: m[0] });
       i += m[0].length;

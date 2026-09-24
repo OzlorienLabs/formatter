@@ -166,7 +166,9 @@ export function colorHtml(out: AsciiOut, dark: boolean): string {
     if (run) html += `<span style="color:rgb(${runKey.split(",").map((v) => Number(v) * 16 + 8).join(",")})">${run}</span>`;
     return html;
   });
-  return `<pre style="margin:0;padding:12px;font-family:var(--font-mono),monospace;font-size:9px;line-height:1.05;letter-spacing:0;background:${dark ? "#0d0f12" : "#ffffff"};border-radius:8px;overflow:auto;white-space:pre">${rows.join("\n")}</pre>`;
+  // Size the glyphs so ~520px shows the whole width; very wide art scrolls.
+  const fs = Math.max(4, Math.min(10, 520 / (Math.max(1, out.cols) * 0.6))).toFixed(1);
+  return `<pre style="margin:0;padding:12px;font-family:var(--font-mono),monospace;font-size:${fs}px;line-height:1.05;letter-spacing:0;background:${dark ? "#0d0f12" : "#ffffff"};border-radius:8px;overflow:auto;white-space:pre">${rows.join("\n")}</pre>`;
 }
 
 /** Browser only: decode a data URL and scale it onto a canvas of the sampling size. */

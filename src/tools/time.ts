@@ -1,6 +1,6 @@
 import { DurationError, allForms, parseDuration, toClock, toCompact, toHuman, toIso } from "./lib/H-duration";
 import {
-  abbr, bestSlots, cityOf, dayDelta, dstInfo, fmtDate, fmtOffset, fmtTime, fmtTransition, localZone, longName, nextTransition, offsetMin, overlapIntervals, parseRefTime, partsIn, resolveZone, zonedToUtc,
+  abbr, bestSlots, cityOf, dayDelta, entryName, dstInfo, fmtDate, fmtOffset, fmtTime, fmtTransition, localZone, longName, nextTransition, offsetMin, overlapIntervals, parseRefTime, partsIn, resolveZone, zonedToUtc,
 } from "./lib/H-tz";
 import { ToolError, bool, num, str, type Result, type SpecModule, type View } from "./types";
 
@@ -189,21 +189,26 @@ export function lapsCsv(laps: number[]): string {
 
 export const DEFAULT_ZONES = "local, UTC, America/New_York, Europe/London, Asia/Kolkata, Asia/Tokyo";
 
-export function parseZoneList(s: string | undefined): { zones: string[]; bad: string[] } {
+export function parseZoneList(s: string | undefined): { zones: string[]; bad: string[]; names: Record<string, string> } {
   const zones: string[] = [];
   const bad: string[] = [];
+  const names: Record<string, string> = {};
   for (const raw of (s?.trim() ? s : DEFAULT_ZONES).split(/[,\n;]+/)) {
     const q = raw.trim();
     if (!q) continue;
     const z = resolveZone(q);
     if (!z) bad.push(q);
-    else if (!zones.includes(z)) zones.push(z);
+    else if (!zones.includes(z)) {
+      zones.push(z);
+      names[z] = entryName(q, z);
+    }
   }
-  return { zones, bad };
+  return { zones, bad, names };
 }
 
 function tzCompare(zonesSrc: string, timeSrc: string, opts: Record<string, unknown>): Result {
-  const { zones, bad } = parseZoneList(zonesSrc);
+  const { zones, bad, names } = parseZoneList(zonesSrc);
+  const cityOf = (z: string) => names[z] ?? z;
   if (!zones.length) throw new ToolError(`No valid time zones. Use IANA names like Europe/London, cities like "Bangalore", or UTC+5:30.${bad.length ? ` Not recognised: ${bad.join(", ")}` : ""}`);
   const home = zones[0];
   const t = parseRefTime(timeSrc, home);

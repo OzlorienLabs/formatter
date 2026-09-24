@@ -351,7 +351,7 @@ const specs: SpecModule = {
       { label: "Word-wrapped", inputs: { text: "Offline-first: every tool here runs in your browser. Nothing you paste is uploaded, logged or sent to any server — close the network tab and try it." }, opts: { style: "shadow", width: 38, title: "Privacy", titleAlign: "center", margin: 2 }, note: "A fixed width wraps long paragraphs by words; the Shadow style adds a ▒ drop shadow and Margin indents the whole box." },
       { label: "ASCII for plain terminals", inputs: { text: "WARNING\nThis script rewrites git history.\nRun it on a fresh clone." }, opts: { style: "ascii", align: "center", padX: 3 }, note: "+-| characters survive any terminal, e-mail or legacy font." },
       { label: "CSV → table", inputs: { text: SALES_CSV }, opts: { mode: "table", style: "single", rowLines: true }, note: "Quoted CSV cells with commas are kept whole; numeric columns right-align automatically and the header gets a ╞═╡ rule." },
-      { label: "Markdown table", inputs: { text: MD_TABLE }, opts: { mode: "table", style: "double" }, note: "Markdown alignment rules (:--, :-:, --:) set each column's alignment." },
+      { label: "Markdown table", inputs: { text: MD_TABLE }, opts: { mode: "table", style: "rounded" }, note: "Markdown alignment rules (:--, :-:, --:) set each column's alignment." },
       { label: "TSV, forced alignment", inputs: { text: TSV }, opts: { mode: "table", style: "heavy", colAlign: "l,c,c,r" }, note: "Tab-separated input (pasted from a spreadsheet) with explicit per-column alignment l,c,c,r." },
       { label: "Block letters", inputs: { text: "BUILD PASSING" }, opts: { style: "block", padX: 2, padY: 1 }, note: "Solid █▀▄ block borders for READMEs and release notes." },
     ],
@@ -606,14 +606,14 @@ const specs: SpecModule = {
       return { text, views: [{ label: "Drawing", out: { kind: "text", text } }, sizeStats(text, [{ label: "Line style", value: cs }])] };
     },
     examples: [
-      { label: "Architecture", inputs: { art: ARCH, size: "72x18" }, note: "Boxes joined by arrows, drawn with the Rectangle and Arrow tools — junctions like ┬ appear automatically." },
+      { label: "Architecture", inputs: { art: ARCH, size: "72x18" }, note: "Boxes joined by arrows, drawn with the Box and Arrow tools — junctions like ┬ appear automatically." },
       { label: "Sequence sketch", inputs: { art: SEQUENCE, size: "64x16" }, note: "Lifelines with ├───▶ message arrows. Change Lines to Heavy or Double and press Convert to restyle every line." },
       { label: "Table", inputs: { art: TABLE_ART, size: "56x12" }, note: "A hand-editable table; the Select tool moves blocks and Text edits cells." },
       { label: "ASCII flowchart → Unicode", inputs: { art: FLOW, size: "56x18" }, opts: { charset: "light" }, note: "Classic +-| art: Run (or Convert) turns + corners into ┌ ┐ └ ┘ ├ by reading which neighbours connect." },
       { label: "Blank canvas", inputs: { art: "", size: "80x24" }, note: "Start from scratch: pick a tool (R rectangle, L line, A arrow, T text) and drag on the grid." },
     ],
-    steps: ["Pick a tool, then drag on the grid (Rectangle, Line, Arrow) or click (Text, Fill).", "Lines that touch or cross join automatically with the right corner or junction glyph.", "Copy or download the drawing — or Run to convert it to another line style."],
-    tips: ["Shortcuts: V select, R rectangle, L line, A arrow, T text, B brush, F fill, E eraser; ⌘/Ctrl+Z undo, ⌘/Ctrl+Shift+Z redo.", "Hold Shift while drawing a line or arrow to bend it vertically first."],
+    steps: ["Pick a tool, then drag on the grid (Box, Line, Arrow, Erase) or click (Text, Fill).", "Lines that touch or cross join automatically with the right corner or junction glyph.", "Copy or download the drawing — or Run to convert it to another line style."],
+    tips: ["Shortcuts (click the canvas first): V select, R box, L line, A arrow, T text, B brush, F fill, E erase; ⌘/Ctrl+Z undo, ⌘/Ctrl+Shift+Z redo.", "A line bends the way you first drag; hold Shift to flip the bend. Alt on an arrow adds a head at both ends.", "Paste text (⌘/Ctrl+V) onto the canvas to drop in an existing diagram at the cursor."],
   },
 };
 

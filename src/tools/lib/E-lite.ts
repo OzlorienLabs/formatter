@@ -181,16 +181,89 @@ export function checkBrackets(lx: Lexed): LiteIssue[] {
 
 const OPS = /\s*(<<=|>>=|&\^=|:=|==|!=|<=|>=|\+=|-=|\*=|\/=|%=|&=|\|=|\^=|=>|->|(?<![=!<>:+\-*/%&|^.])=(?![=>~]))\s*/g;
 
-function respaceCode(s: string, lang: LiteLang, first: boolean, last: boolean): string {
+/** In Rust/Java, `Vec<u8>=` is a generic close followed by `=`, not `>=`. */
+function splitGenericGe(t: string): string {
+  let bal = 0;
+  let out = "";
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i], p = t[i - 1] ?? "", n = t[i + 1] ?? "";
+    if (c === "<" && n !== "=" && n !== "<" && p !== "<" && /[\w:&]/.test(p)) bal++;
+    else if (c === ">" && p !== "-" && p !== "=" && bal > 0) {
+      bal--;
+      if (n === "=" && t[i + 2] !== "=") {
+        out += "> ";
+        continue;
+      }
+    }
+    out += c;
+  }
+  return out;
+}
+
+/** Java comparisons `i<n` / `a>b` get spaces; generic brackets `List<String>` do not. */
+function javaCompare(t: string): string {
+  let bal = 0;
+  let out = "";
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i], p = t[i - 1] ?? "", n = t[i + 1] ?? "";
+    if (c === "<" && n !== "<" && n !== "=" && p !== "<") {
+      const rest = t.slice(i + 1);
+      if (/[\w)\]]/.test(p) && /^\s*[a-z0-9(\-]/.test(rest) && !/^\s*(int|long|double|float|byte|short|char|boolean)\s*\[/.test(rest)) {
+        out = out.replace(/\s*$/, "") + " < ";
+        while (t[i + 1] === " ") i++;
+        continue;
+      }
+      bal++;
+    } else if (c === ">" && p !== "-" && p !== ">" && n !== ">" && n !== "=") {
+      if (bal > 0) bal--;
+      else if (/[\w)\]]/.test(p) && /^\s*[\w(\-]/.test(t.slice(i + 1))) {
+        out = out.replace(/\s*$/, "") + " > ";
+        while (t[i + 1] === " ") i++;
+        continue;
+      }
+    }
+    out += c;
+  }
+  return out;
+}
+
+function respaceCode(s: string, lang: LiteLang, first: boolean, last: boolean, ctx: string[]): string {
   let t = s.replace(/[ \t]{2,}/g, " ");
+  if (lang === "rust" || lang === "java") t = splitGenericGe(t);
   t = t.replace(/\s+,/g, ",").replace(/,(?=[^\s)\]}>])/g, ", ");
   t = t.replace(/\)\{/g, ") {").replace(/\}else\b/g, "} else").replace(/\belse\{/g, "else {").replace(/\btry\{/g, "try {").replace(/\bfinally\{/g, "finally {");
+  t = t.replace(/\)(?=[A-Za-z_])/g, ") ");
   const kw = lang === "java" ? /\b(if|for|while|switch|catch|synchronized)\(/g : lang === "go" ? /\b(if|for|switch)\(/g : /\b(if|while|match)\(/g;
   t = t.replace(kw, "$1 (");
   t = t.replace(OPS, (_m, op: string) => ` ${op} `);
-  t = t.replace(/;(?=[^\s;)])/g, "; ");
+  if (lang === "go") {
+    t = t.replace(/\s*(&&|\|\|)\s*/g, " $1 ");
+    t = t.replace(/(?<=[\w)\]])\s*(?<![<>\-=!])([<>])(?![<>=\-])\s*(?=[\w(\-!])/g, " $1 ");
+  } else if (lang === "java") {
+    t = t.replace(/\s*(&&|\|\|)\s*/g, " $1 ");
+    t = javaCompare(t);
+    t = t.replace(/(?<=[\w)\]])\s*\+\s*(?=[\w(])/g, " + ");
+    t = t.replace(/(\bfor \([\w<>[\], .?]+?\s\w+)\s*:\s*/g, "$1 : ");
+    t = t.replace(/([^\s({\[$#])\{/g, "$1 {").replace(/\{(?=[^\s}])/g, "{ ").replace(/(?<=[^\s{])\}/g, " }");
+  } else {
+    t = t.replace(/(^|[(,=\s])\|([^|]*)\|(?=[^\s|=,)])/g, "$1|$2| ");
+    t = t.replace(/([^\s({\[$#!])\{/g, "$1 {").replace(/\{(?=[^\s}])/g, "{ ").replace(/(?<=[^\s{])\}/g, " }");
+  }
+  // Colons: `key: value` in Go literals and Rust annotations; never `::`, slices or Java ternaries.
+  let out = "";
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    out += c;
+    if (c === "(" || c === "[" || c === "{") ctx.push(c);
+    else if (c === ")" || c === "]" || c === "}") ctx.pop();
+    else if (c === ":" && t[i + 1] !== ":" && t[i - 1] !== ":" && t[i + 1] !== undefined && t[i + 1] !== " " && t[i + 1] !== "=") {
+      const top = ctx[ctx.length - 1];
+      if ((lang === "go" && top === "{") || (lang === "rust" && top !== "[")) out += " ";
+    }
+  }
+  t = out.replace(/[ \t]{2,}/g, " ");
   t = t.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
-  t = t.replace(/[ \t]{2,}/g, " ");
+  t = t.replace(/;(?=[^\s;)])/g, "; ");
   if (first) t = t.replace(/^\s+/, "");
   if (last) t = t.replace(/\s+$/, "");
   return t;
@@ -198,16 +271,20 @@ function respaceCode(s: string, lang: LiteLang, first: boolean, last: boolean): 
 
 export type FormatOpts = { indent: "auto" | "tabs" | "2" | "4"; spacing: boolean };
 
+const GO_BLOCK = /^(func\b|if\b|for\b|switch\b|select\b|else\b|\}\s*else\b|go\s+func\b|defer\s+func\b|type\b.*\b(struct|interface)\s*\{?\s*$)/;
+
 export function formatLite(src: string, lang: LiteLang, opts: FormatOpts): string {
   const text = src.replace(/\r\n?/g, "\n");
   const lx = lex(text, lang);
   const unit = opts.indent === "tabs" || (opts.indent === "auto" && lang === "go") ? "\t" : " ".repeat(opts.indent === "2" ? 2 : 4);
   const lines = text.split("\n");
   const out: string[] = [];
-  let depth = 0;
+  // Each open bracket remembers the indent level of the line that opened it.
+  const stack: { ch: string; ind: number }[] = [];
   let blank = 0;
   const caseAt = new Set<number>();
   let prevCode = "";
+  let lastLevel = 0;
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
     const start = lx.lineStarts[li];
@@ -215,22 +292,23 @@ export function formatLite(src: string, lang: LiteLang, opts: FormatOpts): strin
     const mline = lx.mask.slice(start, end);
     const contStr = li > 0 && start < text.length && (lx.kinds[start] === STR || lx.kinds[start] === CHR) && lx.kinds[start - 1] === lx.kinds[start];
     const contCom = li > 0 && start < text.length && lx.kinds[start] === COM && lx.kinds[start - 1] === COM && lx.kinds[start - 2] === COM;
-    const bump = () => {
+    const bump = (level: number) => {
       for (const ch of mline) {
-        if (ch === "{" || ch === "(" || ch === "[") depth++;
-        else if (ch === "}" || ch === ")" || ch === "]") depth = Math.max(0, depth - 1);
+        if (ch === "{" || ch === "(" || ch === "[") stack.push({ ch, ind: level });
+        else if (ch === "}" || ch === ")" || ch === "]") stack.pop();
       }
-      for (const d of [...caseAt]) if (d > depth) caseAt.delete(d);
+      for (const d of [...caseAt]) if (d > stack.length) caseAt.delete(d);
     };
+    const inner = () => (stack.length ? stack[stack.length - 1].ind + 1 : 0);
     if (contStr) {
       out.push(line);
-      bump();
+      bump(lastLevel);
       continue;
     }
     if (contCom && line.trim()) {
       const t = line.trim();
-      out.push(t.startsWith("*") ? unit.repeat(depth) + " " + t : line.replace(/\s+$/, ""));
-      bump();
+      out.push(t.startsWith("*") ? unit.repeat(inner()) + " " + t : line.replace(/\s+$/, ""));
+      bump(lastLevel);
       continue;
     }
     const endsInString = line.length > 0 && lx.kinds[end - 1] === STR && end < text.length && lx.kinds[end] === STR;
@@ -245,13 +323,15 @@ export function formatLite(src: string, lang: LiteLang, opts: FormatOpts): strin
     const mt = mline.slice(lead).trim();
     let closers = 0;
     while (closers < mt.length && (mt[closers] === "}" || mt[closers] === ")" || mt[closers] === "]" || (closers > 0 && mt[closers] === " "))) closers++;
-    const leadClose = (mt.slice(0, closers).match(/[)}\]]/g) ?? []).length;
-    let level = depth - leadClose;
+    const leadClose = Math.min(stack.length, (mt.slice(0, closers).match(/[)}\]]/g) ?? []).length);
+    const k = stack.length - leadClose;
+    let level = leadClose ? (k > 0 ? stack[k - 1].ind + 1 : 0) : inner();
+    const depth = stack.length;
     const isCase = /^(case\b|default\s*:)/.test(mt) || (lang === "java" && /^default\s*->/.test(mt));
     if (lang === "go" && isCase) level -= 1;
     if (lang === "java") {
       if (isCase) {
-        if (/:\s*$/.test(mt) || /:\s*\/\//.test(mt) || (/:/.test(mt) && !/->/.test(mt))) caseAt.add(depth);
+        if (/:\s*$/.test(mt) || (/:/.test(mt) && !/->/.test(mt))) caseAt.add(depth);
         else caseAt.delete(depth);
       } else if (caseAt.has(depth) && leadClose === 0) level += 1;
     }
@@ -263,22 +343,32 @@ export function formatLite(src: string, lang: LiteLang, opts: FormatOpts): strin
     if (opts.spacing) {
       // Re-space code runs only; strings, chars and comments stay byte-for-byte.
       const s0 = start + (endsInString ? lead : line.indexOf(trimmed));
+      const ctx = stack.map((x) => x.ch);
       let res = "";
-      let k = 0;
-      while (k < body.length) {
-        const kind = lx.kinds[s0 + k];
-        let j = k + 1;
+      let p = 0;
+      while (p < body.length) {
+        const kind = lx.kinds[s0 + p];
+        let j = p + 1;
         while (j < body.length && (lx.kinds[s0 + j] === CODE) === (kind === CODE)) j++;
-        const seg = body.slice(k, j);
+        const seg = body.slice(p, j);
         if (kind === COM && res) res = res.replace(/[ \t]*$/, " ");
-        res += kind === CODE ? respaceCode(seg, lang, k === 0, j === body.length) : seg;
-        k = j;
+        else if (kind !== CODE && res) {
+          if (/,$/.test(res)) res += " ";
+          else if (lang !== "rust" && /[^+]\+\s*$/.test(res)) res = res.replace(/\s*\+\s*$/, " + ");
+          else if (/[^:]:$/.test(res) && ((lang === "go" && ctx[ctx.length - 1] === "{") || (lang === "rust" && ctx[ctx.length - 1] !== "["))) res += " ";
+        }
+        let piece = kind === CODE ? respaceCode(seg, lang, p === 0, j === body.length, ctx) : seg;
+        if (kind === CODE && lang !== "rust" && /["'`]$/.test(res)) piece = piece.replace(/^\s*\+(?!\+)\s*/, " + ");
+        res += piece;
+        p = j;
       }
       body = endsInString ? res : res.trim();
+      if (lang === "go" && GO_BLOCK.test(mt)) body = body.replace(/([^\s{(\[])\{(\s*(\/\/.*)?)$/, "$1 {$2");
     }
     out.push(unit.repeat(level) + body);
+    lastLevel = level;
     if (mt) prevCode = mt.replace(/\s+$/, "");
-    bump();
+    bump(level);
   }
   while (out.length && out[out.length - 1] === "") out.pop();
   let result = out;
@@ -422,7 +512,8 @@ export function outline(lx: Lexed, lang: LiteLang): Sym[] {
     } else {
       let r: RegExpExecArray | null;
       const mods = "(?:(?:public|protected|private|static|final|abstract|sealed|non-sealed|strictfp|synchronized|native|default|transient|volatile)\\s+)*";
-      const top = containers[containers.length - 1];
+      const last = containers[containers.length - 1];
+      const top = last && ["class", "interface", "enum", "record", "annotation"].includes(last.kind) ? last : undefined;
       if ((r = /^package\s+([\w.]+)/.exec(t))) add("package", r[1]);
       else if ((r = /^import\s+(static\s+)?([\w.*]+)/.exec(t))) add("import", (r[1] ? "static " : "") + r[2]);
       else if ((r = new RegExp(`^(?:@\\w+(?:\\([^)]*\\))?\\s+)*${mods}(class|interface|enum|record|@interface)\\s+(\\w+)`).exec(t))) add(r[1] === "@interface" ? "annotation" : r[1], r[2], true);
@@ -515,7 +606,7 @@ export function lint(lx: Lexed, lang: LiteLang, syms: Sym[]): LiteIssue[] {
       if (depths[i] === 0 && /^[A-Za-z_][\w, ]*:=/.test(t)) add("error", "`:=` is only allowed inside functions — use `var name = value` at package level.", i + 1);
       if (t === "{") {
         const prev = codeLines.filter((x) => x.i < i).pop();
-        if (prev && /(\bfunc\b.*\)|\bif\b.*|\bfor\b.*|\bswitch\b.*|\belse|\bstruct|\binterface)$/.test(prev.t)) add("error", "The opening brace must be on the same line — Go inserts a semicolon at the end of the previous line.", i + 1);
+        if (prev && /^(func|if|for|switch|select|else|type|\}\s*else)\b/.test(prev.t) && !/[{,(\[]$/.test(prev.t)) add("error", "The opening brace must be on the same line — Go inserts a semicolon at the end of the previous line.", i + 1);
       }
       if (/\berr\s*:?=[^=]/.test(t) && !/\berr\s*[!=]=\s*nil/.test(t) && !/^return\b/.test(t)) {
         const nx = nextCode(i);

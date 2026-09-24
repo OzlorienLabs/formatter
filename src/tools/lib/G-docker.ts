@@ -58,6 +58,13 @@ export const DOCKER_DEFAULT: DockerCfg = {
   name: "web",
 };
 
+/** The defaults a stack starts from (version, package manager, port, commands, env). */
+export function dockerDefaults(stack: Stack): DockerCfg {
+  const st = STACKS.find((x) => x.id === stack) ?? STACKS[0];
+  const env: Record<Stack, string> = { node: "NODE_ENV=production", bun: "NODE_ENV=production", python: "", go: "", java: "", rust: "RUST_LOG=info", dotnet: "", php: "", ruby: "RAILS_LOG_TO_STDOUT=1", static: "", deno: "" };
+  return { ...DOCKER_DEFAULT, stack: st.id, pm: st.pms[0][0], version: st.version, port: st.port, build: st.build, start: st.start, env: env[st.id], flavour: st.id === "go" || st.id === "rust" ? "distroless" : st.id === "python" || st.id === "ruby" ? "slim" : "alpine", services: [] };
+}
+
 export type Issue = { level: "error" | "warning" | "info" | "ok"; message: string };
 
 /** CMD/ENTRYPOINT exec form from a command line; null when it needs a shell. */
@@ -229,7 +236,7 @@ export function generateDocker(c: DockerCfg): DockerOut {
         L.push("# ── build", "FROM deps AS build", "COPY . .");
         if (build) L.push(`RUN ${build}`);
         L.push("", "# ── production dependencies only", `FROM ${img.build.replace(`node:${c.version}`, "node:${NODE_VERSION}")} AS prod-deps`, "WORKDIR /app", `COPY package.json ${lock} ./`, runLine(pre + installProd, cacheDir, cache), "");
-        L.push("# ── runtime", `FROM ${img.runtime}`, "WORKDIR /app");
+        L.push("# ── runtime", `FROM ${img.runtime.replace(`node:${c.version}`, "node:${NODE_VERSION}")}`, "WORKDIR /app");
         const own = c.nonroot && c.flavour !== "distroless" ? " --chown=node:node" : "";
         L.push(`COPY --from=prod-deps${own} /app/node_modules ./node_modules`);
         L.push(`COPY --from=build${own} /app/${build ? "dist" : "src"} ./${build ? "dist" : "src"}`, `COPY --from=build${own} /app/package.json ./`);

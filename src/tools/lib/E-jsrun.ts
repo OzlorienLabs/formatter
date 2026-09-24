@@ -93,7 +93,7 @@ function cleanStack(stack) {
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
     var m = /main\.js:(\d+):(\d+)/.exec(l);
-    if (m) { out.push(l.replace(/\(?(?:eval at [^)]*\)?,? )?[^\s(]*main\.js:(\d+):(\d+)\)?/, function (_, a, b) { return "(line " + (+a - OFFSET) + ":" + b + ")"; })); continue; }
+    if (m) { out.push(l.replace(/at (async )?eval \(/, "at $1<main> (").replace(/\(?(?:eval at [^)]*\)?,? )?[^\s(]*main\.js:(\d+):(\d+)\)?/, function (_, a, b) { return "(line " + (+a - OFFSET) + ":" + b + ")"; })); continue; }
     if (i === 0 || !/^\s+at |@/.test(l)) out.push(l);
   }
   return out.join("\n");
@@ -205,7 +205,8 @@ self.onmessage = async function (e) {
 };
 `;
 
-type Listener = (m: Msg | { type: "status"; status: "idle" | "running" }) => void;
+export type JsEvent = Exclude<Msg, { type: "done" }> | { type: "status"; status: "idle" | "running" } | ({ type: "final" } & JsDone);
+type Listener = (m: JsEvent) => void;
 
 export type JsRunResult = { entries: Entry[]; done: JsDone };
 
@@ -284,7 +285,7 @@ class JsRunner {
       this.pending = { id, resolve, reject, entries, timer };
       w.onmessage = async (e: MessageEvent<Msg>) => {
         const m = e.data;
-        this.emit(m);
+        if (m.type !== "done") this.emit(m);
         if (m.type === "clear") {
           entries.length = 0;
           return;
@@ -300,6 +301,7 @@ class JsRunner {
             const pos = await syntaxLine(code);
             if (pos) done.error = { ...m.error, line: pos.line, col: pos.col, stack: `${m.error.stack}\n    at line ${pos.line}:${pos.col}` };
           }
+          this.emit({ type: "final", ...done });
           this.emit({ type: "status", status: "idle" });
           resolve({ entries, done });
           // The worker stays alive so pending timers can still log, until the next run or Stop.

@@ -31,7 +31,7 @@ const SPECIAL: Record<string, { gen: Gen; args: string; desc: string; sample: st
   sentence: { args: "[words]", desc: "One sentence", sample: "{{sentence}}", gen: (f, a) => (a[0] ? f.lorem.sentence(num(a[0], 8)) : f.lorem.sentence()) },
   paragraph: { args: "[sentences]", desc: "One paragraph", sample: "{{paragraph 2}}", gen: (f, a) => f.lorem.paragraph(num(a[0], 3)) },
   index: { args: "[start]", desc: "Position in the enclosing repeat (0-based; {{index 1}} starts at 1)", sample: "{{index 1}}", gen: (_f, a, c) => c.index + num(a[0], 0) },
-  price: { args: "[min max]", desc: "Price with two decimals", sample: "{{price 5 250}}", gen: (f, a) => Number(f.commerce.price({ min: num(a[0], 1), max: num(a[1], 500), dec: 2 })) },
+  price: { args: "[min max]", desc: "Price with two decimals", sample: "{{price 5 250}}", gen: (f, a, c) => TYPE_BY_KEY.price.gen(f, { min: num(a[0], 1), max: num(a[1], 500) }, c) },
   name: { args: "", desc: "Full name", sample: "{{name}}", gen: (f) => f.person.fullName() },
   color: { args: "", desc: "Hex colour", sample: "{{color}}", gen: (f) => f.color.rgb({ format: "hex", casing: "lower" }) },
   guid: { args: "", desc: "UUID v4 (alias)", sample: "{{guid}}", gen: (f) => f.string.uuid() },

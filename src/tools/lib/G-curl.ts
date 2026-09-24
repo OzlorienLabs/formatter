@@ -86,7 +86,7 @@ export type Warn = { level: "warning" | "info" | "error"; message: string };
 function q(s: string, sh: Shell): string {
   if (sh === "cmd") return `"${s.replace(/"/g, '\\"').replace(/%/g, "%%")}"`;
   if (sh === "powershell") return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, "''")}'`;
-  return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+  return /^[\w@%+=:,./-]+$/.test(s) ? s : !s.includes("'") ? `'${s}'` : !/["$`\\!]/.test(s) ? `"${s}"` : `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
 export function fullUrl(s: CurlState): string {
@@ -221,8 +221,13 @@ export function buildCurl(s: CurlState, o: { multiline: boolean; shell: Shell; l
   if (s.include) add("--include", null, "Print the response headers before the body", "-i");
   if (s.verbose) add("--verbose", null, "Show the full request/response conversation (on stderr)", "-v");
   if (s.silent) {
-    add("--silent", null, "No progress meter", "-s");
-    add("--show-error", null, "…but still print errors", "-S");
+    if (L) {
+      add("--silent", null, "No progress meter");
+      add("--show-error", null, "…but still print errors");
+    } else {
+      parts.push(["-sS"]);
+      explain.push(["-sS", "", "Silent (no progress meter) but still show errors"]);
+    }
     if (s.verbose) warnings.push({ level: "info", message: "-v with -s: verbose output still appears; only the progress meter is hidden." });
   }
   if (s.output === "o") add("--output", s.outFile || "response.json", "Write the body to this file", "-o");

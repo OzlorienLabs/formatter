@@ -203,15 +203,16 @@ export function resolveZone(q: string, zones?: string[]): string | null {
 }
 
 /** Search for the zone picker: aliases and IANA names, best matches first. */
-export function searchZones(q: string, zones: string[], limit = 12): { zone: string; label: string }[] {
+export function searchZones(q: string, zones: string[], limit = 12): { zone: string; label: string; alias?: string }[] {
   const s = q.trim().toLowerCase();
   if (!s) return [];
-  const out: { zone: string; label: string; score: number }[] = [];
+  const out: { zone: string; label: string; score: number; alias?: string }[] = [];
   const seen = new Set<string>();
   for (const [k, z] of Object.entries(ALIASES)) {
     if (k.length < 3 && k !== s) continue;
     const i = k.indexOf(s);
-    if (i >= 0) out.push({ zone: z, label: `${k.replace(/\b\w/g, (c) => c.toUpperCase())} → ${z}`, score: i === 0 ? (k === s ? 0 : 0.5) : 3 });
+    const name = k.length <= 4 ? k.toUpperCase() : k.replace(/\b\w/g, (c) => c.toUpperCase());
+    if (i >= 0) out.push({ zone: z, label: `${name} → ${z}`, alias: k.length > 4 ? name : undefined, score: i === 0 ? (k === s ? 0 : 0.5) : 3 });
   }
   for (const z of zones) {
     const zl = z.toLowerCase().replace(/_/g, " ");
@@ -219,14 +220,14 @@ export function searchZones(q: string, zones: string[], limit = 12): { zone: str
     if (i >= 0) out.push({ zone: z, label: z, score: cityOf(z).toLowerCase().startsWith(s) ? 1 : i === 0 ? 2 : 4 });
   }
   out.sort((a, b) => a.score - b.score || a.label.length - b.label.length);
-  const res: { zone: string; label: string }[] = [];
+  const res: { zone: string; label: string; alias?: string }[] = [];
   for (const o of out) {
     const key = o.zone + "|" + o.label;
     if (seen.has(o.zone) && o.label !== o.zone) continue;
     if (seen.has(key)) continue;
     seen.add(o.zone);
     seen.add(key);
-    res.push({ zone: o.zone, label: o.label });
+    res.push({ zone: o.zone, label: o.label, alias: o.alias });
     if (res.length >= limit) break;
   }
   return res;
@@ -340,4 +341,12 @@ export function fmtTransition(nx: { at: number; before: number; after: number },
   const dm = nx.after - nx.before;
   const delta = `${dm > 0 ? "+" : "−"}${Math.abs(dm) % 60 ? `${Math.floor(Math.abs(dm) / 60) ? Math.floor(Math.abs(dm) / 60) + "h" : ""}${Math.abs(dm) % 60}m` : Math.abs(dm) / 60 + "h"}`;
   return `${fmtDate(p)} ${fmtTime(p, h12)} → ${fmtOffset(nx.after)} (${delta})`;
+}
+
+/** Display name for a list entry: the city a user typed ("Bangalore"), else the zone's city. */
+export function entryName(token: string, zone: string): string {
+  const t = token.trim();
+  if (/^local$/i.test(t)) return cityOf(zone);
+  if (!t.includes("/") && ALIASES[t.toLowerCase()] && t.length > 4) return t.replace(/\b\w/g, (c) => c.toUpperCase());
+  return cityOf(zone);
 }

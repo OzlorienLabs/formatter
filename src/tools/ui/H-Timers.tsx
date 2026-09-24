@@ -375,7 +375,7 @@ function CountdownPanel({ inputs, setInput, record, report, register, sound }: P
       notify("Time's up", `${toCompact(full / 1000)} countdown finished`);
       record(`Countdown ${toCompact(full / 1000)} finished`);
     }
-  });
+  }, [c.running, left, full, sound, record]);
   useEffect(() => report("countdown", c.running, c.running ? `⏳ ${timerText(left, false)}` : ringing ? "⏰ Time's up" : null));
   useEffect(() => {
     if (!ringing || !sound) return;
@@ -629,7 +629,7 @@ function IntervalPanel({ inputs, setInput, record, report, register, sound }: Pa
       if (lastBeep.current && lastBeep.current.split(":")[0] !== String(idx) && sound) beep(seg.kind === "work" ? 1175 : 587, 0.35);
       lastBeep.current = key;
     }
-  });
+  }, [c.running, finished, segLeft, idx, totalMs, sound, R, record, work, rest, seg.kind]);
   useEffect(() => report("intervals", c.running, c.running ? `${seg.kind === "work" ? "🔥" : "·"} ${timerText(segLeft, false)}` : null));
 
   const toggle = () => {

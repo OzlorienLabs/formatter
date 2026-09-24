@@ -169,7 +169,8 @@ export const FIELD_TYPES: FieldType[] = [
   { key: "product", label: "Product name", group: G.commerce, gen: (f) => f.commerce.productName() },
   { key: "productAdjective", label: "Product adjective", group: G.commerce, gen: (f) => f.commerce.productAdjective() },
   { key: "department", label: "Department", group: G.commerce, gen: (f) => f.commerce.department() },
-  { key: "price", label: "Price", group: G.commerce, args: ["min", "max"], gen: (f, a) => Number(f.commerce.price({ min: n(a.min, 1), max: n(a.max, 500), dec: 2 })) },
+  // faker's commerce.price only yields whole amounts (x.00); real prices have cents, often .99 / .49 / .95
+  { key: "price", label: "Price", group: G.commerce, args: ["min", "max"], gen: (f, a) => { const lo = n(a.min, 1), hi = n(a.max, 500); const whole = f.number.int({ min: Math.floor(lo), max: Math.max(Math.floor(lo), Math.ceil(hi) - 1) }); const cents = f.helpers.weightedArrayElement([{ weight: 5, value: 0.99 }, { weight: 2, value: 0.49 }, { weight: 2, value: 0.95 }, { weight: 1, value: 0 }, { weight: 3, value: f.number.int(99) / 100 }]); return Math.min(hi, Math.max(lo, Math.round((whole + cents) * 100) / 100)); } },
   { key: "company", label: "Company", group: G.commerce, gen: (f) => f.company.name() },
   { key: "catchPhrase", label: "Catch phrase", group: G.commerce, gen: (f) => f.company.catchPhrase() },
   { key: "colorName", label: "Colour name", group: G.commerce, gen: (f) => f.color.human() },

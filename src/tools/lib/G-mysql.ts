@@ -92,7 +92,8 @@ export const ACTIONS: [MysqlAction, string][] = [
 type Explain = [string, string, string];
 type Warn = { level: "warning" | "info" | "error"; message: string };
 
-const sq = (s: string) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+/** Shell-quote with whichever quotes need no escaping (single, else double, else '\'' escapes). */
+const sq = (s: string) => (/^[\w@%+=:,./-]+$/.test(s) ? s : !s.includes("'") ? `'${s}'` : !/["$`\\!]/.test(s) ? `"${s}"` : `'${s.replace(/'/g, `'\\''`)}'`);
 const sqlStr = (s: string) => `'${s.replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
 const ident = (s: string) => "`" + s.replace(/`/g, "``") + "`";
 
@@ -131,6 +132,15 @@ export function buildMysql(s: MysqlState, o: { multiline: boolean }): { command:
   const db = s.database.trim();
   let redirect = "";
   let pipeIn = "";
+  let stdin = false;
+  /** -e 'SQL' when it quotes cleanly; otherwise a quoted heredoc, which needs no escaping at all. */
+  const sqlArg = (sql: string, meaning: string) => {
+    if (sql.includes("'") && /["$`\\!]/.test(sql)) {
+      redirect = ` <<'SQL'\n${sql}\nSQL`;
+      stdin = true;
+      explain.push(["<<'SQL'", "…", `${meaning} — fed on stdin as a quoted heredoc, so the shell leaves every quote and backslash alone`]);
+    } else add("-e", meaning, sq(sql));
+  };
   switch (a) {
     case "connect":
       if (db) add(db, "Default database");
@@ -181,7 +191,7 @@ export function buildMysql(s: MysqlState, o: { multiline: boolean }): { command:
       if (s.outfile) {
         const sql = `${qtext} INTO OUTFILE ${sqlStr("/var/lib/mysql-files/" + (s.csvFile || "export.csv"))} FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\\\' LINES TERMINATED BY '\\n';`;
         if (db) add("-D", "Database", sq(db));
-        add("-e", "Run this statement and exit", sq(sql));
+        sqlArg(sql, "Run this statement and exit");
         warnings.push({ level: "info", message: "INTO OUTFILE writes on the database server, only inside secure_file_priv (often /var/lib/mysql-files/), and needs the FILE privilege. No header row." });
       } else {
         if (db) add("-D", "Database", sq(db));
@@ -199,7 +209,7 @@ export function buildMysql(s: MysqlState, o: { multiline: boolean }): { command:
       add("--local-infile=1", "Allow LOAD DATA LOCAL on the client side");
       if (db) add("-D", "Database", sq(db));
       const sql = `LOAD DATA LOCAL INFILE ${sqlStr(s.csvFile || "data.csv")} INTO TABLE ${ident(s.table || "mytable")} CHARACTER SET ${s.charset || "utf8mb4"} FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' LINES TERMINATED BY '\\n'${s.csvHeader ? " IGNORE 1 LINES" : ""};`;
-      add("-e", "Run LOAD DATA and exit", sq(sql));
+      sqlArg(sql, "Run LOAD DATA and exit");
       warnings.push({ level: "warning", message: "The server must allow it too: SET GLOBAL local_infile = 1; (off by default since MySQL 8.0)." });
       warnings.push({ level: "info", message: "Files saved on Windows end lines with \\r\\n — change LINES TERMINATED BY to '\\r\\n' or the last column keeps a \\r." });
       if (!s.table) warnings.push({ level: "error", message: "Enter the target table." });
@@ -210,7 +220,7 @@ export function buildMysql(s: MysqlState, o: { multiline: boolean }): { command:
       const pw = s.newPassword || "change-me-please";
       const scope = db ? `${ident(db)}.*` : "*.*";
       const sql = `CREATE USER IF NOT EXISTS ${who} IDENTIFIED BY ${sqlStr(pw)}; GRANT ${s.privileges || "ALL PRIVILEGES"} ON ${scope} TO ${who}; SHOW GRANTS FOR ${who};`;
-      add("-e", "Create the account, grant privileges, then show what it can do", sq(sql));
+      sqlArg(sql, "Create the account, grant privileges, then show what it can do");
       if (!s.newPassword) warnings.push({ level: "warning", message: "Set a strong password — the placeholder “change-me-please” is in the command." });
       else warnings.push({ level: "warning", message: "The new user's password will be in your shell history; run the SQL inside an interactive mysql session instead if that matters." });
       if (s.newUserHost === "%") warnings.push({ level: "info", message: "Host '%' lets the user connect from anywhere; restrict it (e.g. '10.0.%' or 'localhost') when you can." });
@@ -240,13 +250,16 @@ export function buildMysql(s: MysqlState, o: { multiline: boolean }): { command:
   if (o.multiline) command = [head, ...f.map((x) => "  " + x)].join(" \\\n") + redirect;
   else command = [head, ...f].join(" ") + redirect;
 
-  // docker exec variant
+  // docker exec variant: the client runs inside the container, so the password
+  // variable must expand there — wrap in sh -c with quoting that survives the host shell
   const c = s.container || "mysql";
   const inner = [tool, ...f.filter((x) => !x.startsWith("-h") && !x.startsWith("-P"))].join(" ");
   const pw = s.auth === "prompt" ? inner.replace(/ -p(?= |$)/, ' -p"$MYSQL_ROOT_PASSWORD"') : inner;
+  const wrap = (cmd: string) => (cmd.includes("'") ? `sh -c "${cmd.replace(/(["$`\\])/g, "\\$1")}"` : `sh -c '${cmd}'`);
   let docker: string;
-  if (a === "restore") docker = s.gzip ? `gunzip < ${sq(s.file || `${db || "dump"}.sql.gz`)} | docker exec -i ${c} sh -c '${pw.replace(/'/g, `'\\''`)}'` : `docker exec -i ${c} sh -c '${pw.replace(/'/g, `'\\''`)}' < ${sq(s.file || `${db || "dump"}.sql`)}`;
-  else if (a === "connect") docker = `docker exec -it ${c} ${inner}`;
-  else docker = `docker exec ${c} sh -c '${pw.replace(/'/g, `'\\''`)}'${redirect}`;
+  if (stdin) docker = `docker exec -i ${c} ${wrap(pw)}${redirect}`;
+  else if (a === "restore") docker = s.gzip ? `gunzip < ${sq(s.file || `${db || "dump"}.sql.gz`)} | docker exec -i ${c} ${wrap(pw)}` : `docker exec -i ${c} ${wrap(pw)} < ${sq(s.file || `${db || "dump"}.sql`)}`;
+  else if (a === "connect") docker = `docker exec -it ${c} ${wrap(pw)}`;
+  else docker = `docker exec ${c} ${wrap(pw)}${redirect}`;
   return { command, explain, warnings, docker };
 }

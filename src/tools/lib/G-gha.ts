@@ -308,7 +308,7 @@ export async function analyse(wf: Obj, src: string): Promise<Analysis> {
       } else if (step.run !== undefined) {
         const run = s(step.run);
         text = explainRun(run, s(step.shell) || undefined);
-        const ln = lineOf(src, new RegExp(reEsc(run.split("\n")[0].trim()).slice(0, 60))) ?? jobLine;
+        const ln = lineOf(src, new RegExp(reEsc(run.split("\n")[0].trim().slice(0, 60)))) ?? jobLine;
         const inj = run.match(/\$\{\{\s*(github\.event\.[\w.]*(title|body|message|name|email|label|ref|head_ref|default_branch|page_name)\w*|github\.head_ref)\s*\}\}/gi);
         if (inj) issues.push({ level: "error", message: `Script injection risk in job ${id}: ${[...new Set(inj)].join(", ")} is pasted into the shell script. An attacker controls that text — pass it through env: and use "$VAR" instead.`, line: ln });
         else if (/\$\{\{\s*github\.event\./.test(run)) issues.push({ level: "info", message: `Job ${id} interpolates github.event values into run: — safe for IDs and numbers, but route free text through env:.`, line: ln });
@@ -341,13 +341,15 @@ export async function analyse(wf: Obj, src: string): Promise<Analysis> {
   const text = toText(name, wf, triggers, jobs, matrices);
   // dedupe identical issues
   const seen = new Set<string>();
-  const uniq = issues.filter((i) => (seen.has(i.message) ? false : (seen.add(i.message), true)));
+  const uniq = issues.filter((i) => (seen.has(i.message) ? false : (seen.add(i.message), true))).map(({ level, message, line }) => ({ level, message, line }));
   const order = { error: 0, warning: 1, info: 2, ok: 3 };
   uniq.sort((a, b) => order[a.level] - order[b.level] || (a.line ?? 0) - (b.line ?? 0));
   return { name, triggers, jobs, matrices, issues: uniq, mermaid, summaryHtml, text };
 }
 
 const FIRST_PARTY = /^(actions|github)\//i;
+/** Large vendors publishing official actions: tag pinning is still a risk, but a smaller one. */
+const VENDORS = /^(docker|aws-actions|azure|google-github-actions|hashicorp|microsoft|gradle|ruby|pnpm|oven-sh|denoland|codecov|slackapi|golangci|github-actions)\//i;
 const DEPRECATED: [RegExp, string][] = [
   [/^actions\/(checkout|setup-node|setup-python|setup-java|setup-go|cache)@v[12]$/, "runs on a retired Node.js runtime"],
   [/^actions\/(upload|download)-artifact@v[123]$/, "was shut down (v3 and older stopped working in January 2025) — use v4"],
@@ -365,7 +367,19 @@ function checkRef(uses: string, job: string, issues: Issue[], line?: number) {
   for (const [re, why] of DEPRECATED) if (re.test(uses)) issues.push({ level: "warning", message: `${uses} (job ${job}) ${why}.`, line });
   const sha = /^[0-9a-f]{40}$/.test(version);
   if (/^(main|master|dev|develop|latest|HEAD)$/.test(version)) issues.push({ level: "warning", message: `${uses} (job ${job}) follows a branch: its code can change under you at any time. Pin a release tag or, better, a commit SHA.`, line });
-  else if (!sha && !FIRST_PARTY.test(ref)) issues.push({ level: "warning", message: `Third-party action ${uses} (job ${job}) is pinned to a movable tag — pin the full commit SHA (with the tag in a comment) so a compromised release cannot run in your CI.`, line });
+  else if (!sha && !FIRST_PARTY.test(ref)) {
+    const vendor = VENDORS.test(ref);
+    const key = `pin:${uses}`;
+    const prev = issues.find((i) => (i as Issue & { key?: string }).key === key) as (Issue & { key?: string; jobs?: string[] }) | undefined;
+    if (prev) {
+      prev.jobs!.push(job);
+      prev.message = pinMsg(uses, prev.jobs!, vendor);
+    } else issues.push({ level: vendor ? "info" : "warning", message: pinMsg(uses, [job], vendor), line, key, jobs: [job] } as Issue);
+  }
+}
+
+function pinMsg(uses: string, jobs: string[], vendor: boolean): string {
+  return `${vendor ? "Vendor" : "Third-party"} action ${uses} (job${jobs.length > 1 ? "s" : ""} ${jobs.join(", ")}) is pinned to a movable tag — ${vendor ? "consider pinning" : "pin"} the full commit SHA (tag in a comment) so a re-pointed or compromised release cannot run in your CI.`;
 }
 
 /* ── renderers ──────────────────────────────────────────────────────── */
