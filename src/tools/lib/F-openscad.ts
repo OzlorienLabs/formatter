@@ -88,7 +88,7 @@ export function parseParams(code: string): Param[] {
     if (/^(module|function|include|use)\b/.test(line) || /^[a-z_]\w*\s*\(/i.test(line)) break;
     const c = line.match(/^\/\/\s*(.+)$/);
     if (c) {
-      lastComment = c[1];
+      lastComment = c[1].length <= 48 && !/[.:]$/.test(c[1]) ? c[1] : "";
       continue;
     }
     const m = line.match(/^([A-Za-z_]\w*)\s*=\s*([^;]+);\s*(?:\/\/\s*(.*))?$/);

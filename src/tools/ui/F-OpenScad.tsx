@@ -156,7 +156,7 @@ export default function OpenScad({ inputs, setInput, run, result, error, mono, r
                 </div>
               </div>
             ))}
-            <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-neutral-600)" }}>Top-level variables with a <code>// [min:max]</code> or <code>// [a, b]</code> comment become controls; values are passed with -D.</p>
+            <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-neutral-600)" }}>Top-level variables with a <code>{"// [min:max]"}</code> or <code>{"// [a, b]"}</code> comment become controls; values are passed with -D.</p>
           </Card>
         )}
       </div>
@@ -226,7 +226,7 @@ export default function OpenScad({ inputs, setInput, run, result, error, mono, r
               <span className="e">{error}</span>
             ) : consoleView && consoleView.out.kind === "text" ? (
               consoleView.out.text.split("\n").map((l, i) => (
-                <span key={i} className={/^ERROR|error/i.test(l) ? "e" : /^WARNING|DEPRECATED/.test(l) ? "w" : /^ECHO/.test(l) ? "o" : undefined}>
+                <span key={i} className={/^(ERROR|Parser error|Can.t parse)/i.test(l) ? "e" : /^WARNING|DEPRECATED/.test(l) ? "w" : /^ECHO/.test(l) ? "o" : undefined}>
                   {l}
                   {"\n"}
                 </span>
@@ -243,7 +243,7 @@ export default function OpenScad({ inputs, setInput, run, result, error, mono, r
 
 const CSS = `
 .fos-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;align-items:start}
-@media (max-width:980px){.fos-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:980px){.fos-grid{grid-template-columns:minmax(0,1fr)}.fos-grid>div:last-of-type{order:-1}}
 .fos-params{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px}
 .fos-param{display:grid;gap:4px;font-size:13px;color:var(--color-neutral-700)}
 .fos-busy{position:absolute;left:10px;top:10px;display:flex;gap:8px;align-items:center;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.9);font-size:13px;box-shadow:var(--shadow-sm)}

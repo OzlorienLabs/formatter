@@ -31,7 +31,7 @@ function splitPair(fg: string, bg: string): [string, string] {
 function ColorField({ label, value, onChange, parsed }: { label: string; value: string; onChange: (v: string) => void; parsed: RGBA | null }) {
   const hex = parsed ? toHex({ ...parsed, a: 1 }) : "#000000";
   return (
-    <label style={{ display: "grid", gap: 5 }}>
+    <label style={{ display: "grid", gap: 5, minWidth: 0 }}>
       <span className="lbl">{label}</span>
       <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span className="fct-chip" style={{ background: parsed ? toHex(parsed) : "transparent" }} title="Open the system colour picker">
@@ -169,7 +169,7 @@ export default function Contrast({ inputs, opts, setInput, record }: CustomProps
       <style>{KIT_CSS + CSS}</style>
       <div className="f-2col">
         <Card title="Colours" right={<CopyBtn label="Copy report" text={`${fgHex} on ${bgHex}: ${fmt(ratio, 2)}:1 — ${grades.map((g) => `${g.label} ${g.pass ? "pass" : "fail"}`).join(", ")}; APCA Lc ${fmt(lc, 1)}`} />}>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto minmax(0,1fr)", gap: 10, alignItems: "end" }}>
+          <div className="fct-pair">
             <ColorField label="Text" value={fgS} parsed={fg0} onChange={(v) => setPair(v, bgS)} />
             <button type="button" className="btn btn-sm" title="Swap colours" aria-label="Swap text and background" onClick={() => setPair(bgS, fgS)} style={{ marginBottom: 2 }}>
               ⇄
@@ -290,6 +290,8 @@ export default function Contrast({ inputs, opts, setInput, record }: CustomProps
 }
 
 const CSS = `
+.fct-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:end}
+@media (max-width:520px){.fct-pair{grid-template-columns:minmax(0,1fr)}.fct-pair>button{justify-self:start}}
 .fct-chip{position:relative;width:40px;height:36px;border-radius:6px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);overflow:hidden;background-image:none}
 .fct-chip input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .fct-ratio{display:flex;gap:16px;align-items:stretch;margin:16px 0 12px;flex-wrap:wrap}

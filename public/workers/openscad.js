@@ -22,6 +22,7 @@ async function attempt(code, defines, format) {
   const logs = [];
   const push = (text) => {
     if (/Could not initialize localization|Fontconfig error: Cannot load default config/.test(text)) return;
+    text = text.replace(/ in file \/input\.scad,?/g, "").replace(/file \/input\.scad/g, "your code");
     logs.push({ level: classify(text), text });
   };
   const osc = await createOpenSCAD({ print: push, printErr: push });

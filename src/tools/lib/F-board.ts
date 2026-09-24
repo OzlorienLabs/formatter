@@ -134,7 +134,7 @@ function polyStrokes(el: El, pts: [number, number][], closed: boolean): Cmd[][] 
   const r = rng(el.seed);
   const amp = 1.2 + el.sw * 0.35;
   const out: Cmd[][] = [];
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < (el.dash ? 1 : 2); pass++) {
     const c: Cmd[] = [];
     for (let i = 0; i < seq.length - 1; i++) c.push(...roughLine(r, seq[i][0], seq[i][1], seq[i + 1][0], seq[i + 1][1], amp * (pass ? 1.3 : 1)));
     out.push(c);

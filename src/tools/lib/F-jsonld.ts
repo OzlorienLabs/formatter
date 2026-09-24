@@ -523,7 +523,7 @@ const thumb = (label: string) => `<div class="rr-thumb">${esc(label)}</div>`;
 export function richPreview(e: Entity): string {
   const n = e.node;
   const t = typesOf(n);
-  const url = textOf(n.url ?? n["@id"] ?? n.mainEntityOfPage);
+  const url = textOf(n.url ?? n["@id"] ?? n.mainEntityOfPage ?? asObj(n.offers)?.url);
   const crumbs = `<div class="rr-url">${esc(host(url))} › ${esc(t[0] ?? "")}</div>`;
   const is = (...xs: string[]) => xs.some((x) => t.includes(x));
   const rating = (v: unknown) => {

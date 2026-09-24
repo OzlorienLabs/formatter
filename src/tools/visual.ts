@@ -360,7 +360,7 @@ ${THREE_RESIZE}`;
 
 const THREE_SHADOWS = `${THREE_HEAD}
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.VSMShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#e8ecf1");
@@ -935,6 +935,7 @@ const specs: SpecModule = {
       const counts = scene.elements.reduce<Record<string, number>>((m, e) => ((m[e.type] = (m[e.type] ?? 0) + 1), m), {});
       return {
         text: svg,
+        notes: scene.elements.length ? undefined : ["The board is empty — draw something, or pick an example."],
         filename: "whiteboard.svg",
         views: [
           { label: "SVG", out: { kind: "svg", svg, name: "whiteboard" } },

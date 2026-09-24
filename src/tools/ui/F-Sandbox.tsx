@@ -179,7 +179,7 @@ export default function Sandbox({ mode, inputs, opts, setInput, mono, record }: 
 
 const CSS = `
 .fsb-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:14px;align-items:start}
-@media (max-width:980px){.fsb-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:980px){.fsb-grid{grid-template-columns:minmax(0,1fr)}.fsb-grid>div:last-of-type{order:-1}}
 .fsb-frame{display:block;width:100%;height:440px;border:0;background:#fff;border-radius:0 0 8px 8px}
 @media (max-width:600px){.fsb-frame{height:340px}}
 .fsb-console{max-height:200px;min-height:70px;overflow:auto;padding:8px 10px;font-family:var(--font-mono);font-size:12.5px;line-height:1.5}

@@ -72,7 +72,7 @@ export function parseSvg(src: string): Document {
   if (err) {
     const msg = (err.textContent ?? "").replace(/\s+/g, " ").trim();
     const m = msg.match(/line (\d+)(?: at column (\d+))?/i);
-    throw new ToolError(`Invalid SVG (XML parse error${m ? ` at line ${m[1]}${m[2] ? `, column ${m[2]}` : ""}` : ""}): ${msg.replace(/^This page contains the following errors:\s*/i, "").replace(/Below is a rendering.*$/i, "").slice(0, 240)}`);
+    throw new ToolError(`Invalid SVG (XML parse error${m ? ` at line ${m[1]}${m[2] ? `, column ${m[2]}` : ""}` : ""}): ${msg.replace(/^This page contains the following errors:\s*/i, "").replace(/Below is a rendering.*$/i, "").replace(/^.*?error on line \d+ at column \d+:\s*/i, "").trim().slice(0, 240)}`);
   }
   const root = doc.documentElement;
   if (root.localName !== "svg") throw new ToolError(`The root element is <${root.localName}>, not <svg>.`);

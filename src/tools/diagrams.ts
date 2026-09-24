@@ -203,7 +203,7 @@ const DOT_RADIAL = `digraph radial {
   node [fillcolor="#e0f2fe"]
   web -> {html css js a11y perf}
   node [fillcolor="#fce7f3"]
-  js -> {ts react node wasm}
+  js -> {ts react nodejs wasm}
   css -> {grid flex anim}
   perf -> {cache cdn lazy}
   node [fillcolor="#fef9c3"]
@@ -462,14 +462,28 @@ Savings,Emergency fund,200`,
   y-axis "Users" 0 --> 60
   bar [12, 18, 25, 31, 44, 52]
   line [12, 18, 25, 31, 44, 52]`,
-  block: `block-beta
-  columns 3
-  Frontend:3
-  API["API gateway"] Auth["Auth"] Search["Search"]
-  space DB[("Postgres")] space
-  Frontend --> API
-  API --> DB
-  Auth --> DB`,
+  packet: `packet-beta
+  title TCP header
+  0-15: "Source port"
+  16-31: "Destination port"
+  32-63: "Sequence number"
+  64-95: "Acknowledgment number"
+  96-99: "Data offset"
+  100-105: "Reserved"
+  106-111: "Flags"
+  112-127: "Window"
+  128-143: "Checksum"
+  144-159: "Urgent pointer"`,
+  kanban: `kanban
+  todo[To do]
+    t1[Write release notes]
+    t2[Fix login redirect]
+  doing[In progress]
+    t3[Dark mode]@{ assigned: "maya", priority: "High" }
+  review[Review]
+    t4[Cache CI dependencies]
+  done[Done]
+    t5[Upgrade Node]`,
   architecture: `architecture-beta
   group cloud(cloud)[Cloud]
   service web(internet)[Browser]
@@ -696,9 +710,22 @@ async function mermaidRender(code: string, theme: string, look: string, name: st
     if (err) throw new ToolError(err);
     return { notes: ["Syntax checked. Rendering needs a browser."] };
   }
-  const svg = await M.renderMermaid(code, { theme: theme as "default", look: look as "classic" });
-  void name;
-  return { svg: fitSvg(svg), notes: [] };
+  // Gantt charts size themselves to the (off-screen, full-page-wide) render container, which makes the
+  // text tiny once scaled into the pane. Give that container a sensible width while it renders.
+  const gantt = /^\s*(?:---[\s\S]*?---\s*)?(?:%%.*\n\s*)*gantt\b/.test(code);
+  let style: HTMLStyleElement | null = null;
+  if (gantt) {
+    style = document.createElement("style");
+    style.textContent = 'div[id^="dmmd-"]{width:880px!important}';
+    document.head.appendChild(style);
+  }
+  try {
+    const svg = await M.renderMermaid(code, { theme: theme as "default", look: look as "classic" });
+    void name;
+    return { svg: fitSvg(svg), notes: [] };
+  } finally {
+    style?.remove();
+  }
 }
 
 function mermaidError(e: unknown, code: string): ToolError {
@@ -837,7 +864,8 @@ const specs: SpecModule = {
       { label: "Quadrant", inputs: { code: MMD.quadrant }, note: "Points placed on two axes from 0 to 1." },
       { label: "Sankey", inputs: { code: MMD.sankey }, note: "CSV rows of source, target, value." },
       { label: "XY chart", inputs: { code: MMD.xychart }, note: "Bar and line series on shared axes." },
-      { label: "Block", inputs: { code: MMD.block }, note: "A grid of blocks with column spans and arrows." },
+      { label: "Packet", inputs: { code: MMD.packet }, note: "Bit ranges of a network packet — the TCP header." },
+      { label: "Kanban", inputs: { code: MMD.kanban }, note: "Columns of cards with metadata (assignee, priority)." },
       { label: "Architecture", inputs: { code: MMD.architecture }, note: "Services with built-in icons inside a group; edges pick sides (L/R/T/B)." },
       { label: "Hand-drawn", inputs: { code: MMD.flowchart }, opts: { look: "handDrawn", theme: "neutral" }, note: "The same flowchart with the sketchy hand-drawn look." },
       { label: "Syntax error", inputs: { code: MMD.broken }, error: true, note: "An unclosed { shape — Mermaid points at the line." },
@@ -881,7 +909,7 @@ const specs: SpecModule = {
           text: `${enc.encoded}\n\n# PlantUML text encoding (${enc.method === "deflate" ? "raw deflate + PlantUML base64" : "~h hex fallback"}), for use with your own PlantUML server —\n# e.g. https://your-plantuml-server/svg/<encoded>. Nothing is sent from this page.`,
         },
       });
-      notes.push(`Detected ${/^[aeiou]/.test(t.kind) ? "an" : "a"} ${t.kind} diagram → Mermaid ${t.mermaid.split("\n").find((l) => !/^(---|title:)/.test(l))?.split(" ")[0]}.`);
+      notes.push(`Detected ${t.kind === "er" ? "an ER" : t.kind === "usecase" ? "a use-case" : `${/^[aeiou]/.test(t.kind) ? "an" : "a"} ${t.kind}`} diagram → Mermaid ${t.mermaid.split("\n").find((l) => !/^(---|title:)/.test(l))?.split(" ")[0]}.`);
       return { text: t.mermaid, views, notes, filename: "diagram.mmd" };
     },
     examples: [

@@ -134,7 +134,7 @@ function SvgView({ svg, name = "diagram" }: { svg: string; name?: string }) {
         ) : (
           <div
             data-testid="svg-output"
-            style={{ transform: `scale(${zoom})`, transformOrigin: "0 0", width: "fit-content" }}
+            style={{ transform: `scale(${zoom})`, transformOrigin: "0 0", width: "100%" }}
             dangerouslySetInnerHTML={{ __html: clean }}
           />
         )}

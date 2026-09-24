@@ -266,7 +266,7 @@ export default function ImageToolkit({ inputs, setInput, result, error, record }
 
 const CSS = `
 .fit-grid{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:14px;align-items:start}
-@media (max-width:900px){.fit-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.fit-grid{grid-template-columns:minmax(0,1fr)}.fit-grid>div:last-of-type{order:-1}}
 .fit-stage{display:flex;gap:12px;padding:14px;justify-content:center;align-items:flex-start;min-height:260px;background-color:#fff;background-image:linear-gradient(45deg,#eee 25%,transparent 25%),linear-gradient(-45deg,#eee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eee 75%),linear-gradient(-45deg,transparent 75%,#eee 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
 .fit-stage figure{margin:0;display:grid;gap:6px;justify-items:center;min-width:0;flex:1}
 .fit-stage img{max-width:100%;max-height:560px;display:block;box-shadow:0 1px 6px rgba(0,0,0,.12)}

@@ -219,7 +219,7 @@ export function socialHtml(r: SeoReport): string {
     /* keep */
   }
   const large = (r.twitter["twitter:card"] ?? "summary_large_image") === "summary_large_image";
-  const ph = (h: number) => `<div class="sc-img" style="height:${h}px">${img ? `Image: ${esc(img.split("/").pop() ?? img)}<br><small>(not fetched — previews stay offline)</small>` : "No og:image"}</div>`;
+  const ph = (h: number) => `<div class="sc-img" style="height:${h}px"><div>${img ? `Image: ${esc(img.split("/").pop() ?? img)}<br><small>(not fetched — previews stay offline)</small>` : "No og:image"}</div></div>`;
   return `<div class="sc-wrap">
 <div class="serp-lbl">Facebook / LinkedIn</div>
 <div class="sc">${ph(200)}<div class="sc-body"><div class="sc-domain">${esc(domain.toUpperCase())}</div><div class="sc-title">${esc(trunc(title, 88))}</div><div class="sc-desc">${esc(trunc(desc, 110))}</div></div></div>

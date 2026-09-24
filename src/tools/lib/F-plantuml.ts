@@ -37,7 +37,7 @@ class Ids {
     if (id) return id;
     let base = key.replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || this.prefix;
     if (/^\d/.test(base)) base = `${this.prefix}${base}`;
-    if (/^(end|graph|subgraph|style|class|click|default|flowchart|direction|call|href|linkStyle|classDef)$/i.test(base)) base = `${base}_`;
+    if (/^(end|graph|subgraph|style|class|click|default|flowchart|direction|call|href|linkStyle|classDef|participant|actor|as|note|loop|alt|else|opt|par|and|rect|activate|deactivate|box|title|autonumber|critical|break|option|create|destroy|links?|properties|details|left|right|over|of|state|namespace)$/i.test(base)) base = `${base}_`;
     id = base;
     for (let i = 2; this.used.has(id); i++) id = `${base}${i}`;
     this.used.add(id);
@@ -138,12 +138,16 @@ function detect(p: Pre): string {
   if (/^(start|stop)$/im.test(text) || /^(#\w+)?:[^\n]*;\s*$/m.test(text) || /^(if\s*\(.*\)\s*then|while\s*\(|repeat\s*$|fork\s*$)/im.test(text)) return "activity";
   if (/^\s*\(\*\)/m.test(text)) return "unsupported:legacy activity";
   if (/\[\*\]/.test(text) || /^state\s+/im.test(text)) return "state";
-  if (/^(abstract\s+class|abstract|class|interface|enum|annotation)\s+/im.test(text) || /<\|--|--\|>|\*--|--\*|o--|--o|\.\.\|>|<\|\.\./.test(text)) return "class";
-  if (/^usecase\b/im.test(text) || /^\s*\([^)]+\)(\s+as\s+\w+)?\s*$/m.test(text) || /(-->|--|\.>|->)\s*\([^)]+\)/.test(text)) return "usecase";
-  if (/^(component|node|database|cloud|package|folder|frame|artifact|storage|queue|rectangle)\b/im.test(text) || /^\[[^\]]+\]/m.test(text)) {
-    if (/^(participant|actor)\b/im.test(text) && /->/.test(text) && !/^\[/m.test(text)) return "sequence";
-    return "component";
-  }
+  const count = (re: RegExp) => (text.match(re) ?? []).length;
+  const classScore = count(/^(abstract\s+class|abstract|class|enum|annotation)\s+/gim) + count(/<\|--|--\|>|\*--|--\*|o--|--o|\.\.\|>|<\|\.\./g) + (/^interface\s+\S+\s*\{/im.test(text) ? 2 : 0);
+  const compScore = count(/^(component|node|database|cloud|package|folder|frame|artifact|storage|queue|rectangle|card|agent|stack|file|boundary|control|collections|hexagon)\b/gim) + count(/^\[[^\]]+\]/gm);
+  const ucScore = count(/^usecase\b/gim) + count(/^\s*\([^)]+\)(\s+as\s+\w+)?\s*$/gm) + count(/(-->|--|\.>|->)\s*\([^)]+\)/g);
+  const seqScore = count(/^(participant|autonumber|activate|deactivate|alt|loop|opt|par)\b/gim) + count(/^\S+\s*-+>>?\s*\S+\s*:/gm);
+  if (seqScore > Math.max(classScore, compScore, ucScore)) return "sequence";
+  if (classScore && classScore >= compScore && classScore >= ucScore) return "class";
+  if (ucScore && ucScore >= compScore) return "usecase";
+  if (compScore) return "component";
+  if (/^interface\s+/im.test(text)) return "class";
   return "sequence";
 }
 
@@ -173,9 +177,10 @@ function sequence(p: Pre, W: Warning[]): string[] {
       let id: string, label = "";
       const asM = rest.match(/^("[^"]+"|\S+)\s+as\s+("[^"]+"|\S+)$/i);
       if (asM) {
+        // `participant "Long" as L` and `participant Long as L` → id L; `participant L as "Long"` → id L.
         const [a, b] = [asM[1], asM[2]];
-        if (a.startsWith('"')) [label, id] = [unq(a), unq(b)];
-        else [id, label] = [unq(a), unq(b)];
+        if (b.startsWith('"') && !a.startsWith('"')) [id, label] = [unq(a), unq(b)];
+        else [label, id] = [unq(a), unq(b)];
       } else {
         rest = unq(rest);
         id = rest;
@@ -186,7 +191,7 @@ function sequence(p: Pre, W: Warning[]): string[] {
       if (!order.includes(mid)) order.push(mid);
       const kw = kind === "actor" ? "actor" : "participant";
       out.push(`  ${kw} ${mid}${label && label !== mid ? ` as ${label.replace(/\\n/g, " ")}` : ""}`);
-      if (!["participant", "actor"].includes(kind)) out.push(`  %% ${mid} is a ${kind} in PlantUML`);
+      if (!["participant", "actor"].includes(kind)) out.push(`  %% ${mid}: PlantUML ${kind}`);
       continue;
     }
     if (/^autonumber\b/i.test(t)) {
@@ -274,14 +279,16 @@ function sequence(p: Pre, W: Warning[]): string[] {
     if (/^(\.\.\.|\|\|\|?|\|\|\d+\|\|)/.test(t) || /^\.\.\..*\.\.\.$/.test(t)) continue;
     if (/^(divider|delay)\b/i.test(t)) continue;
     // Messages
-    m = t.match(/^("[^"]+"|[\w.@$À-￿]+|\[|\])\s*([<ox]?<?[-.]+(?:\[[^\]]*\])?[-.]*(?:>>|>|\\\\|\/\/|\\|\/)?[xo]?)\s*("[^"]+"|[\w.@$À-￿]+|\[|\])\s*(\+\+|--|\*\*|!!)?\s*(?:(\+\+|--)\s*)?(?::\s*(.*))?$/);
+    m = t.match(/^("[^"]+"|[\w.@$À-￿]+|\[|\])\s*([ox]?(?:<<?|\\{1,2}|\/{1,2})?[-.]+(?:\[[^\]]*\])?[-.]*(?:>>?|\\{1,2}|\/{1,2})?[xo]?)\s*("[^"]+"|[\w.@$À-￿]+|\[|\])\s*(\+\+|--|\*\*|!!)?\s*(?:(\+\+|--)\s*)?(?::\s*(.*))?$/);
     if (m && /[-.]/.test(m[2])) {
       let [, a, arrow, b, mod, mod2, text = ""] = m;
       arrow = arrow.replace(/\[[^\]]*\]/g, "");
       const dashed = /--|\.\./.test(arrow);
       let from = a, to = b;
-      const reversed = /^[ox]?</.test(arrow) && !/>/.test(arrow);
-      const both = /^</.test(arrow) && />/.test(arrow);
+      const leftHead = /^[ox]?(<|\\|\/)/.test(arrow);
+      const rightHead = /(>|\\|\/)[xo]?$/.test(arrow);
+      const reversed = leftHead && !rightHead;
+      const both = leftHead && rightHead;
       if (reversed) [from, to] = [b, a];
       if (from === "[" || from === "]" || to === "[" || to === "]") {
         W.push({ line: n, message: "Found/lost messages ([ or ]) are drawn from/to the participant itself." });
@@ -291,7 +298,7 @@ function sequence(p: Pre, W: Warning[]): string[] {
       const f = pid(from), tt = pid(to);
       let arr = dashed ? "-->>" : "->>";
       if (/x$/.test(arrow) || /^x/.test(arrow)) arr = dashed ? "--x" : "-x";
-      else if (/>>|\\\\|\/\/|[\\/]$/.test(arrow)) arr = dashed ? "--)" : "-)";
+      else if (/>>|<<|\\|\//.test(arrow)) arr = dashed ? "--)" : "-)";
       if (both) arr = dashed ? "<<-->>" : "<<->>";
       const mods = [mod, mod2].filter(Boolean);
       let pre = "";
@@ -419,6 +426,10 @@ function classDiagram(p: Pre, W: Warning[]): string[] {
       emit(`  ${cid(m[1])} : ${classMember(m[2])}`);
       continue;
     }
+    if ((m = t.match(/^note\s+"([^"]+)"(?:\s+as\s+\w+)?$/i))) {
+      notes.push(`  note "${esc(m[1])}"`);
+      continue;
+    }
     if ((m = t.match(/^note\s+(?:(top|bottom|left|right)\s+of\s+)?("[^"]+"|[\w.$]+)?\s*(?::\s*(.*))?$/i))) {
       let text = m[3];
       if (text === undefined) {
@@ -534,6 +545,12 @@ function activity(p: Pre, W: Warning[]): string[] {
       front = [{ id: d, label: m[3] ?? "" }];
       continue;
     }
+    let prevLabel = "";
+    const pre = t.match(/^\(([^)]*)\)\s*((?:else\s*if|elseif|else)\b.*)$/i);
+    if (pre) {
+      prevLabel = pre[1];
+      t = pre[2];
+    }
     if ((m = t.match(/^(?:else\s*if|elseif)\s*\((.*?)\)\s*(?:is\s*\((.*?)\)\s*)?(?:then\s*(?:\((.*?)\))?)?\s*$/i))) {
       const top = stack[stack.length - 1];
       if (!top || top.kind !== "if") {
@@ -541,7 +558,7 @@ function activity(p: Pre, W: Warning[]): string[] {
         continue;
       }
       top.ends.push(...front);
-      front = [{ id: top.d! }];
+      front = [{ id: top.d!, label: prevLabel }];
       const d = add((id) => `${id}{"${esc(m![1])}"}`);
       top.d = d;
       front = [{ id: d, label: m[3] ?? "" }];
@@ -722,7 +739,7 @@ function stateDiagram(p: Pre, W: Warning[]): string[] {
         if (a.startsWith('"')) [label, id] = [unq(a), sid(b)];
         else [id, label] = [sid(a), unq(b)];
       }
-      if (stereo && /start|end|history|entrypoint|exitpoint|inputpin|outputpin|expansion/i.test(stereo)) {
+      if (stereo && !/^<<(fork|join|choice)>>$/i.test(stereo)) {
         W.push({ line: n, message: `${stereo} states are drawn as plain states.` });
         stereo = "";
       }
@@ -852,6 +869,12 @@ function flowFromElements(p: Pre, W: Warning[], kind: "usecase" | "component"): 
         continue;
       }
       define(kw, label, alias);
+      continue;
+    }
+    if ((m = t.match(/^(package|node|folder|frame|cloud|database|rectangle|card|namespace|together|stack|storage|component)\s*(?:#[\w#]+\s*)?\{$/i))) {
+      const id = ids.get(`${m[1]}_${gseq++}`);
+      defined.add(id);
+      groupLines.push([`${"  ".repeat(groupLines.length)}subgraph ${id}["${m[1].toLowerCase() === "together" ? " " : m[1]}"]`]);
       continue;
     }
     if ((m = t.match(/^(\[[^\]]+\]|\([^)]+\)|:[^:]+:)\s+as\s+("[^"]+"|\S+)\s*(<<[^>]*>>)?\s*$/))) {
