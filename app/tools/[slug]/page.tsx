@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
 import ToolShell from "@/src/components/ToolShell";
+import dynamic from "next/dynamic";
+
+// Platform pages share the tool route; load them only where they are used.
+const Pipelines = dynamic(() => import("@/src/components/platform/Pipelines"));
+const Workspaces = dynamic(() => import("@/src/components/platform/Workspaces"));
+const Recipes = dynamic(() => import("@/src/components/platform/Recipes"));
 import { TOOLS, toolBySlug } from "@/src/lib/tools-registry";
 
 export function generateStaticParams() {
@@ -20,7 +26,7 @@ export default function ToolPage({ params }: { params: { slug: string } }) {
   if (!tool) notFound();
   return (
     <>
-      <ToolShell tool={tool} />
+      {tool.slug === "tool-pipelines" ? <Pipelines /> : tool.slug === "saved-workspaces" ? <Workspaces /> : tool.slug === "developer-recipes" ? <Recipes /> : <ToolShell tool={tool} />}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

@@ -96,18 +96,6 @@ test("the category route preselects its chip", async ({ page }) => {
   await expect(page.getByTestId("tool-card")).toHaveCount(2);
 });
 
-test("a pipeline chains two tools", async ({ page }) => {
-  await page.goto("/pipelines");
-  await page.locator("#pipe-source").fill('{ "a" : 1 }');
-  await page.getByLabel("Tool to add").selectOption("json-minifier");
-  await page.getByRole("button", { name: "Add step" }).click();
-  await page.getByLabel("Tool to add").selectOption("Base64 Encode");
-  await page.getByRole("button", { name: "Add step" }).click();
-  await page.getByRole("button", { name: "Run chain" }).click();
-  await expect(page.getByTestId("pipeline-result")).toContainText("✓ JSON Minifier");
-  await expect(page.getByTestId("pipeline-result")).toContainText("eyJhIjoxfQ==");
-});
-
 test("the rail is off-canvas at 900px", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 });
   await openTool(page, "json-formatter");

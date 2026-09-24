@@ -41,11 +41,19 @@ describe("history", () => {
     expect(again).toHaveLength(1);
   });
 
-  it("records the same input again once another tool has run in between", () => {
+  it("moves a repeated run to the top instead of duplicating it", () => {
     let h = pushHistory([], entry(1));
     h = pushHistory(h, entry(2, { slug: "json-minifier" }));
     h = pushHistory(h, entry(3, { fin: "input-1" }));
-    expect(h).toHaveLength(3);
+    expect(h).toHaveLength(2);
+    expect(h[0].id).toBe("id-3");
+    expect(h[1].slug).toBe("json-minifier");
+  });
+
+  it("treats different options as a different run", () => {
+    let h = pushHistory([], entry(1, { opts: { indent: "2" } }));
+    h = pushHistory(h, entry(2, { opts: { indent: "4" } }));
+    expect(h).toHaveLength(2);
   });
 
   it("records a different input for the same tool", () => {
