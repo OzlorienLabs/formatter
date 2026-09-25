@@ -7,7 +7,7 @@ regex & API, languages, canvas, diagrams, generators, image & colour, ASCII, tim
 Workspaces and Recipes. Everything runs in the browser and keeps working offline: no accounts, no
 uploads, no calls to any server but this site.
 
-Next.js 14 (App Router) + TypeScript. Deployed as a static-first app on Vercel.
+Release 1.0.1
 
 ## Develop
 
