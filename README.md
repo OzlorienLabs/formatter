@@ -48,7 +48,23 @@ Adding or changing a tool: read [`docs/TOOL_SPEC_GUIDE.md`](docs/TOOL_SPEC_GUIDE
 - The only network requests a tool makes are ones you explicitly ask for: sending a request to a URL
   you typed in API Workbench, or a remote endpoint in GraphQL. Both default to the built-in offline
   mock API.
+- The one exception is the footer: "Built with curiosity and care by Ozlorien Labs" opens a feedback
+  form (an open note plus an optional email). Submitting posts to this app's own `/api/feedback`, which
+  relays it to Ozlorien Labs. Nothing is sent unless you press Send.
 
 ## Deploy
 
-Vercel: build command `npm run build` (see `vercel.json`), no environment variables.
+Vercel: build command `npm run build` (see `vercel.json`).
+
+The footer feedback form needs one environment variable (see `.env.example`). `app/api/feedback/route.ts`
+relays the note through [Resend](https://resend.com); the key stays on the server.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `RESEND_API_KEY` | yes | Resend API key used to send the note |
+| `FEEDBACK_TO` | no | Destination; defaults to `ozlorienlabs@gmail.com` |
+| `FEEDBACK_FROM` | no | Verified sender; defaults to Resend's shared `onboarding@resend.dev` |
+
+Use a sender on a domain verified in Resend for production — the shared test sender only delivers to the
+address that owns the Resend account. A supplied email becomes the message's `reply_to`. Without
+`RESEND_API_KEY` the route answers `503` and the modal says feedback is not configured yet.

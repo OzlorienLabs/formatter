@@ -6,6 +6,7 @@ import TopBar from "./TopBar";
 import CommandPalette from "./CommandPalette";
 import Drawers from "./Drawers";
 import Toast from "./Toast";
+import SiteFooter from "./SiteFooter";
 import { useApp } from "./AppState";
 import { useOfflineBridge } from "@/src/lib/offline";
 
@@ -41,7 +42,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       <div aria-hidden="true" className="wash-dots" />
 
       {isLanding ? (
-        <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {children}
+          <SiteFooter />
+        </div>
       ) : (
         <div
           className="shell"
@@ -67,6 +71,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <TopBar />
             <main className="scroll" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
               {children}
+              <SiteFooter />
             </main>
           </div>
         </div>

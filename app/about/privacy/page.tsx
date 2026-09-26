@@ -15,6 +15,10 @@ export default function Privacy() {
         The modes that would need a backend — full Rust and Java compilation, PlantUML server rendering, live-URL SEO
         fetches, a CORS proxy — are deliberately out of scope. Those tools run in a paste-only lite mode and say so.
       </p>
+      <p style={{ ...prose, color: "var(--color-neutral-700)" }}>
+        The one thing that sends anything is the feedback form behind &ldquo;Ozlorien Labs&rdquo; in the footer. It
+        delivers your note, and your email only if you give one, to Ozlorien Labs — and only when you press Send.
+      </p>
     </div>
   );
 }
