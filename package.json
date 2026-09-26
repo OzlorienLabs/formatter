@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "vendor": "node scripts/vendor.mjs",
     "predev": "node scripts/vendor.mjs",
