@@ -347,9 +347,11 @@ export default function ToolShell({ tool }: { tool: ToolMeta }) {
           >
             <ToolIcon name="star" size={19} weight={fav ? "fill" : "duotone"} />
           </button>
-          <span className="mono" style={{ padding: "2px 7px", borderRadius: 3, background: tint, color: ink, fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase" }}>
-            {badge}
-          </span>
+          {badge && (
+            <span className="mono" style={{ padding: "2px 7px", borderRadius: 3, background: tint, color: ink, fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase" }}>
+              {badge}
+            </span>
+          )}
         </div>
         <p style={{ margin: "4px 0 0", fontSize: 15.5, color: "var(--color-neutral-700)" }}>{tool.description}</p>
       </div>

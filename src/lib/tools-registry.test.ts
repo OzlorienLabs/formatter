@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TOOLS, CATEGORIES, searchTools, toolBySlug, plateInk, plateTint } from "./tools-registry";
+import { TOOLS, CATEGORIES, searchTools, toolBySlug, plateInk, plateTint, toolBadge } from "./tools-registry";
 
 describe("registry", () => {
   it("holds 125 tools in 18 categories", () => {
@@ -15,6 +15,23 @@ describe("registry", () => {
   it("names the plate variables", () => {
     expect(plateInk("y")).toBe("var(--plate-y)");
     expect(plateTint("c")).toBe("var(--plate-c-tint)");
+  });
+});
+
+describe("toolBadge", () => {
+  it("returns 'wasm' for wasm tools", () => {
+    const duckdb = toolBySlug("duckdb-playground")!;
+    expect(toolBadge(duckdb)).toBe("wasm");
+  });
+
+  it("returns 'lite' for tools with liteNote", () => {
+    const go = toolBySlug("go-playground-lite")!;
+    expect(toolBadge(go)).toBe("lite");
+  });
+
+  it("returns null for standard tools (dropping the live badge)", () => {
+    const jsonFormatter = toolBySlug("json-formatter")!;
+    expect(toolBadge(jsonFormatter)).toBeNull();
   });
 });
 

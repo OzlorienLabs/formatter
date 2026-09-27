@@ -257,11 +257,11 @@ export const categoryOfTool = (t: ToolMeta) => categoryByTitle(t.category)!;
 export const toolCountIn = (slug: string) =>
   TOOLS.filter((t) => categoryOfTool(t).slug === slug).length;
 
-/** The badge shown on cards and in the tool header. */
-export function toolBadge(t: ToolMeta): "live" | "wasm" | "lite" {
+/** The badge shown on cards and in the tool header when an exception applies. */
+export function toolBadge(t: ToolMeta): "wasm" | "lite" | null {
   if (t.wasm) return "wasm";
   if (t.liteNote) return "lite";
-  return "live";
+  return null;
 }
 
 export const plateInk = (p: Plate) => `var(--plate-${p})`;

@@ -25,20 +25,22 @@ export default function ToolCard({ tool }: { tool: ToolMeta }) {
         <span style={{ minWidth: 0 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <strong style={{ fontSize: 17, letterSpacing: "-.015em" }}>{tool.title}</strong>
-            <span
-              className="mono"
-              style={{
-                padding: "1px 6px",
-                borderRadius: 3,
-                background: tint,
-                color: ink,
-                fontSize: 10.5,
-                letterSpacing: ".05em",
-                textTransform: "uppercase",
-              }}
-            >
-              {badge}
-            </span>
+            {badge && (
+              <span
+                className="mono"
+                style={{
+                  padding: "1px 6px",
+                  borderRadius: 3,
+                  background: tint,
+                  color: ink,
+                  fontSize: 10.5,
+                  letterSpacing: ".05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {badge}
+              </span>
+            )}
           </span>
           <span
             style={{ display: "block", marginTop: 3, fontSize: 14, lineHeight: 1.4, color: "var(--color-neutral-700)", textWrap: "pretty" }}
