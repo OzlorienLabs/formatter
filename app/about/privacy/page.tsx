@@ -19,6 +19,10 @@ export default function Privacy() {
         The one thing that sends anything is the feedback form behind &ldquo;Ozlorien Labs&rdquo; in the footer. It
         delivers your note, and your email only if you give one, to Ozlorien Labs — and only when you press Send.
       </p>
+      <p style={{ ...prose, color: "var(--color-neutral-700)" }}>
+        We count visits with Google Analytics and Vercel Web Analytics: which pages load, roughly where from, on
+        what kind of device. They see page addresses, never what you paste into a tool.
+      </p>
     </div>
   );
 }

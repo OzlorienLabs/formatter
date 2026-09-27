@@ -104,6 +104,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/_vercel/")) return; // analytics, never cached
 
   if (url.pathname.startsWith("/mock-api/")) {
     event.respondWith(mockResponse(request));

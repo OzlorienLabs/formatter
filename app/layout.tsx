@@ -2,6 +2,7 @@ import "./globals.css";
 import localFont from "next/font/local";
 import { AppStateProvider } from "@/src/components/AppState";
 import Shell from "@/src/components/Shell";
+import Analytics from "@/src/components/Analytics";
 
 // Self-hosted from @fontsource: no build-time or runtime font fetch, so offline works
 // and builds never depend on a third-party server.
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppStateProvider>
           <Shell>{children}</Shell>
         </AppStateProvider>
+        <Analytics />
       </body>
     </html>
   );

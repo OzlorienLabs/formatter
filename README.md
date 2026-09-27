@@ -5,7 +5,7 @@
 125 developer tools (JSON, encoding, converters, validators, XML, formatters, SQL & data, security,
 regex & API, languages, canvas, diagrams, generators, image & colour, ASCII, time) plus Pipelines,
 Workspaces and Recipes. Everything runs in the browser and keeps working offline: no accounts, no
-uploads, no calls to any server but this site.
+uploads; your input never goes to any server (page-view analytics aside, see below).
 
 Release 1.0.2
 
@@ -51,6 +51,8 @@ Adding or changing a tool: read [`docs/TOOL_SPEC_GUIDE.md`](docs/TOOL_SPEC_GUIDE
 - The one exception is the footer: "Built with curiosity and care by Ozlorien Labs" opens a feedback
   form (an open note plus an optional email). Submitting posts to this app's own `/api/feedback`, which
   relays it to Ozlorien Labs. Nothing is sent unless you press Send.
+- Page-view analytics: Google Analytics 4 (when `NEXT_PUBLIC_GA_ID` is set) and Vercel Web Analytics
+  record which pages are visited. They never see what you paste into a tool.
 
 ## Deploy
 
@@ -68,3 +70,13 @@ relays the note through [Resend](https://resend.com); the key stays on the serve
 Use a sender on a domain verified in Resend for production — the shared test sender only delivers to the
 address that owns the Resend account. A supplied email becomes the message's `reply_to`. Without
 `RESEND_API_KEY` the route answers `503` and the modal says feedback is not configured yet.
+
+Analytics (`src/components/Analytics.tsx`):
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_GA_ID` | no | Google Analytics 4 measurement ID (`G-…`); unset loads no GA script |
+
+`NEXT_PUBLIC_` values are inlined at build time, so redeploy after changing it. Vercel Web Analytics needs
+no variable; enable it under the project's **Analytics** tab in the Vercel dashboard. Its script loads
+only in production builds.
