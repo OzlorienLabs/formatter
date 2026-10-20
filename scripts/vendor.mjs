@@ -7,7 +7,7 @@ const root = join(dirname(new URL(import.meta.url).pathname), "..");
 const nm = (p) => join(root, "node_modules", p);
 const out = (p) => join(root, "public", "vendor", p);
 
-const FILES = [
+export const FILES = [
   ["jq-wasm/dist/build/jq.wasm", "jq/jq.wasm"],
   ["sql.js/dist/sql-wasm-browser.js", "sqljs/sql-wasm.js"],
   ["sql.js/dist/sql-wasm-browser.wasm", "sqljs/sql-wasm-browser.wasm"],

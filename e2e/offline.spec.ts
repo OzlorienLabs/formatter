@@ -6,6 +6,11 @@ import { test, expect } from "@playwright/test";
  */
 test("everything works offline once cached", async ({ page, context }) => {
   test.setTimeout(240_000);
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("fmt:sw-dev", "1");
+    } catch {}
+  });
   await page.goto("/tools/json-formatter");
   await expect(page.getByTestId("tool-ready")).toBeVisible();
   // First visit registers the worker; a reload puts the page under its control.
